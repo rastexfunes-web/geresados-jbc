@@ -1,0 +1,12 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Solo el panel de administración (usuarios autenticados) puede leer y
+    // escribir. El webhook de Mercado Pago escribe desde una Cloud Function
+    // con permisos de administrador, que no pasa por estas reglas.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

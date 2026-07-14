@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "alumnos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "colegioId", "order": "ASCENDING" },
+        { "fieldPath": "apellido", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cuotas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "alumnoId", "order": "ASCENDING" },
+        { "fieldPath": "numero", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
