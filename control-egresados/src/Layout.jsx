@@ -38,11 +38,12 @@ export default function Layout() {
 
   async function cargarAlumnos(colegioId) {
     setLoadingAlumnosId(colegioId);
+    const colegio = colegios?.find((c) => c.id === colegioId);
     const al = await listAlumnos(colegioId);
     const conResumen = await Promise.all(
       al.map(async (a) => {
         const cuotas = await listCuotasAlumno(a.id);
-        return { ...a, resumen: resumenDeuda(cuotas) };
+        return { ...a, resumen: resumenDeuda(cuotas, colegio) };
       })
     );
     setAlumnosPorColegio((prev) => ({ ...prev, [colegioId]: conResumen }));

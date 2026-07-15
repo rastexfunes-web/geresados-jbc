@@ -27,7 +27,17 @@ export async function getColegio(colegioId) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
-export async function crearColegio({ nombre, cantidadCuotas, montoCuota, montoSena, fechaEntrega, imagenUrl }) {
+export async function crearColegio({
+  nombre,
+  cantidadCuotas,
+  montoCuota,
+  montoSena,
+  fechaEntrega,
+  imagenUrl,
+  fechaPrimerVencimiento,
+  frecuenciaDias,
+  recargoPorcentaje,
+}) {
   return addDoc(collection(db, "colegios"), {
     nombre,
     cantidadCuotas: Number(cantidadCuotas),
@@ -35,6 +45,9 @@ export async function crearColegio({ nombre, cantidadCuotas, montoCuota, montoSe
     montoSena: Number(montoSena) || 0,
     fechaEntrega: fechaEntrega || "",
     imagenUrl: imagenUrl || "",
+    fechaPrimerVencimiento: fechaPrimerVencimiento || "",
+    frecuenciaDias: Number(frecuenciaDias) || 30,
+    recargoPorcentaje: Number(recargoPorcentaje) || 0,
     createdAt: serverTimestamp(),
   });
 }
@@ -109,6 +122,7 @@ export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, tel
       numero: i,
       esSena: false,
       monto: colegio.montoCuota,
+      fechaVencimiento: calcularVencimiento(colegio, i),
       estado: "pendiente", // pendiente | pagada
       metodoPago: null, // "mercadopago" | "manual"
       mpPreferenceId: null,
@@ -120,6 +134,34 @@ export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, tel
   await batch.commit();
 
   return alumnoRef;
+}
+
+// Calcula la fecha de vencimiento de la cuota N a partir de la fecha del
+// primer vencimiento y la frecuencia (en días) configuradas en el colegio.
+function calcularVencimiento(colegio, numeroCuota) {
+  if (!colegio.fechaPrimerVencimiento) return "";
+  const base = new Date(colegio.fechaPrimerVencimiento + "T00:00:00");
+  const frecuencia = colegio.frecuenciaDias || 30;
+  base.setDate(base.getDate() + frecuencia * (numeroCuota - 1));
+  return base.toISOString().slice(0, 10);
+}
+
+export function formatFechaAR(fechaISO) {
+  if (!fechaISO) return "";
+  const [y, m, d] = fechaISO.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+export function esCuotaVencida(cuota) {
+  if (cuota.estado === "pagada" || !cuota.fechaVencimiento) return false;
+  const hoy = new Date().toISOString().slice(0, 10);
+  return cuota.fechaVencimiento < hoy;
+}
+
+export function montoConRecargo(cuota, colegio) {
+  if (!esCuotaVencida(cuota)) return cuota.monto;
+  const recargo = colegio?.recargoPorcentaje || 0;
+  return Math.round(cuota.monto * (1 + recargo / 100));
 }
 
 export async function actualizarAlumno(alumnoId, data) {
@@ -163,10 +205,20 @@ export async function desmarcarCuota(cuotaId) {
   });
 }
 
-export function resumenDeuda(cuotas) {
-  const total = cuotas.reduce((acc, c) => acc + c.monto, 0);
+export function resumenDeuda(cuotas, colegio) {
+  let total = 0;
+  let pagado = 0;
   const pagadas = cuotas.filter((c) => c.estado === "pagada");
-  const pagado = pagadas.reduce((acc, c) => acc + c.monto, 0);
+
+  cuotas.forEach((c) => {
+    if (c.estado === "pagada") {
+      total += c.monto;
+      pagado += c.monto;
+    } else {
+      total += montoConRecargo(c, colegio);
+    }
+  });
+
   return {
     total,
     pagado,
