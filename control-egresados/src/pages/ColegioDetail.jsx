@@ -64,6 +64,31 @@ export default function ColegioDetail() {
       )
       .join("");
 
+    // Conteo para producción: cuántas prendas de cada tipo y talle hay que hacer.
+    const conteo = {};
+    alumnos.forEach((a) => {
+      if (a.prendaSuperior) {
+        const talle = a.talleSuperior || "sin talle";
+        conteo[a.prendaSuperior] = conteo[a.prendaSuperior] || {};
+        conteo[a.prendaSuperior][talle] = (conteo[a.prendaSuperior][talle] || 0) + 1;
+      }
+      if (a.prendaAbrigo) {
+        const talle = a.talleAbrigo || "sin talle";
+        conteo[a.prendaAbrigo] = conteo[a.prendaAbrigo] || {};
+        conteo[a.prendaAbrigo][talle] = (conteo[a.prendaAbrigo][talle] || 0) + 1;
+      }
+    });
+
+    const filasResumen = Object.entries(conteo)
+      .map(([prenda, talles]) => {
+        const detalle = Object.entries(talles)
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([talle, cant]) => `<td>${talle}: <strong>${cant}</strong></td>`)
+          .join("");
+        return `<tr><td><strong>${prenda}</strong></td>${detalle}</tr>`;
+      })
+      .join("");
+
     const html = `
       <html>
         <head>
@@ -71,11 +96,13 @@ export default function ColegioDetail() {
           <style>
             body { font-family: Arial, sans-serif; padding: 24px; color: #17233F; }
             h1 { font-size: 20px; margin-bottom: 2px; }
+            h2 { font-size: 15px; margin: 28px 0 10px; }
             .sub { color: #5B6472; font-size: 13px; margin-bottom: 20px; }
             table { width: 100%; border-collapse: collapse; font-size: 13px; }
             th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; }
             th { background: #17233F; color: white; }
             tr:nth-child(even) { background: #F7F5EF; }
+            .resumen td { border: 1px solid #ccc; }
           </style>
         </head>
         <body>
@@ -93,6 +120,11 @@ export default function ColegioDetail() {
               </tr>
             </thead>
             <tbody>${filas}</tbody>
+          </table>
+
+          <h2>Resumen para producción (cantidad por talle)</h2>
+          <table class="resumen">
+            <tbody>${filasResumen}</tbody>
           </table>
         </body>
       </html>
