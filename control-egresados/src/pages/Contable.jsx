@@ -6,14 +6,28 @@ import {
   listTodasLasCuotas,
   esCuotaVencida,
   montoConRecargo,
-  cuotaYaDevengada,
   formatFechaAR,
 } from "../data";
+
+function fechaPagoISO(cuota) {
+  if (!cuota.fechaPago) return null;
+  const d = cuota.fechaPago.toDate ? cuota.fechaPago.toDate() : new Date(cuota.fechaPago);
+  return d.toISOString().slice(0, 10);
+}
+
+function dentroDelRango(fechaISO, desde, hasta) {
+  if (!fechaISO) return false;
+  if (desde && fechaISO < desde) return false;
+  if (hasta && fechaISO > hasta) return false;
+  return true;
+}
 
 export default function Contable() {
   const [colegios, setColegios] = useState(null);
   const [alumnos, setAlumnos] = useState(null);
   const [cuotas, setCuotas] = useState(null);
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
 
   useEffect(() => {
     Promise.all([listColegios(), listTodosLosAlumnos(), listTodasLasCuotas()]).then(
@@ -37,30 +51,45 @@ export default function Contable() {
     return map;
   }, [alumnos]);
 
+  const hayFiltro = Boolean(desde || hasta);
+
   const resumen = useMemo(() => {
     if (!cuotas) return null;
 
+    let facturado = 0;
     let cobrado = 0;
-    let deberiaCobrar = 0;
     let enMora = 0;
     const proximos = [];
 
     cuotas.forEach((c) => {
       const colegio = colegiosPorId[c.colegioId];
 
+      // Facturado en el período: cuotas cuyo vencimiento cae dentro del rango.
+      // Si no hay fecha de vencimiento (alumnos viejos), solo se cuenta
+      // cuando no hay filtro activo, para no perderlas de la contabilidad.
+      const enPeriodoPorVencimiento = c.fechaVencimiento
+        ? dentroDelRango(c.fechaVencimiento, desde, hasta)
+        : !hayFiltro;
+      if (enPeriodoPorVencimiento) {
+        facturado += c.monto;
+      }
+
+      // Cobrado en el período: según la fecha real de pago.
       if (c.estado === "pagada") {
-        cobrado += c.monto;
+        const fPago = fechaPagoISO(c);
+        const enPeriodoPorPago = fPago ? dentroDelRango(fPago, desde, hasta) : !hayFiltro;
+        if (enPeriodoPorPago) {
+          cobrado += c.monto;
+        }
       }
 
-      if (cuotaYaDevengada(c)) {
-        deberiaCobrar += c.monto;
-      }
-
-      if (c.estado !== "pagada" && esCuotaVencida(c)) {
+      // En mora: pendiente, ya vencida a hoy, y con vencimiento dentro del rango.
+      if (c.estado !== "pagada" && esCuotaVencida(c) && enPeriodoPorVencimiento) {
         enMora += montoConRecargo(c, colegio);
       }
 
-      if (c.estado !== "pagada" && c.fechaVencimiento && !esCuotaVencida(c)) {
+      // Próximos vencimientos: pendientes, no vencidas, dentro del rango.
+      if (c.estado !== "pagada" && c.fechaVencimiento && !esCuotaVencida(c) && enPeriodoPorVencimiento) {
         proximos.push(c);
       }
     });
@@ -68,13 +97,13 @@ export default function Contable() {
     proximos.sort((a, b) => a.fechaVencimiento.localeCompare(b.fechaVencimiento));
 
     return {
+      facturado,
       cobrado,
-      deberiaCobrar,
       enMora,
-      saldoPendiente: deberiaCobrar - cobrado,
-      proximos: proximos.slice(0, 20),
+      saldoPendiente: facturado - cobrado,
+      proximos: proximos.slice(0, 30),
     };
-  }, [cuotas, colegiosPorId]);
+  }, [cuotas, colegiosPorId, desde, hasta, hayFiltro]);
 
   if (!colegios || !alumnos || !cuotas || !resumen) {
     return <div className="empty">Cargando…</div>;
@@ -89,17 +118,33 @@ export default function Contable() {
         </div>
       </div>
 
+      <div className="card" style={{ padding: "16px 20px", marginBottom: 24, display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Desde</label>
+          <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Hasta</label>
+          <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+        </div>
+        {hayFiltro && (
+          <button className="btn btn-ghost btn-sm" onClick={() => { setDesde(""); setHasta(""); }}>
+            Ver todo el historial
+          </button>
+        )}
+      </div>
+
       <div className="grid-cards" style={{ marginBottom: 28 }}>
         <div className="card" style={{ padding: 20 }}>
           <div className="deuda-stat">
-            <div className="label">Cobrado a la fecha</div>
+            <div className="label">Cobrado en el período</div>
             <div className="value green">${resumen.cobrado.toLocaleString("es-AR")}</div>
           </div>
         </div>
         <div className="card" style={{ padding: 20 }}>
           <div className="deuda-stat">
-            <div className="label">Debería estar cobrado</div>
-            <div className="value">${resumen.deberiaCobrar.toLocaleString("es-AR")}</div>
+            <div className="label">Facturado en el período</div>
+            <div className="value">${resumen.facturado.toLocaleString("es-AR")}</div>
           </div>
         </div>
         <div className="card" style={{ padding: 20 }}>
@@ -110,7 +155,7 @@ export default function Contable() {
         </div>
         <div className="card" style={{ padding: 20 }}>
           <div className="deuda-stat">
-            <div className="label">Saldo pendiente total</div>
+            <div className="label">Saldo pendiente del período</div>
             <div className={`value ${resumen.saldoPendiente > 0 ? "rust" : "green"}`}>
               ${resumen.saldoPendiente.toLocaleString("es-AR")}
             </div>
@@ -118,12 +163,14 @@ export default function Contable() {
         </div>
       </div>
 
-      <h2 style={{ fontSize: 18, marginBottom: 12 }}>Próximos vencimientos</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 12 }}>
+        {hayFiltro ? "Vencimientos en el período" : "Próximos vencimientos"}
+      </h2>
 
       {resumen.proximos.length === 0 && (
         <div className="card empty">
-          <h3>No hay vencimientos próximos</h3>
-          <p>Todas las cuotas pendientes están vencidas o no tienen fecha asignada.</p>
+          <h3>No hay vencimientos para mostrar</h3>
+          <p>No hay cuotas pendientes con vencimiento en el rango seleccionado.</p>
         </div>
       )}
 
