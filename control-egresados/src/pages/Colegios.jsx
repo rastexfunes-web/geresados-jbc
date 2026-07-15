@@ -80,13 +80,28 @@ function NuevoColegioModal({ onClose, onCreated }) {
   const [cantidadCuotas, setCantidadCuotas] = useState(6);
   const [montoCuota, setMontoCuota] = useState("");
   const [montoSena, setMontoSena] = useState("");
+  const [fechaEntrega, setFechaEntrega] = useState("");
+  const [imagenUrl, setImagenUrl] = useState("");
+  const [fechaPrimerVencimiento, setFechaPrimerVencimiento] = useState("");
+  const [frecuenciaDias, setFrecuenciaDias] = useState(30);
+  const [recargoPorcentaje, setRecargoPorcentaje] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      await crearColegio({ nombre, cantidadCuotas, montoCuota, montoSena });
+      await crearColegio({
+        nombre,
+        cantidadCuotas,
+        montoCuota,
+        montoSena,
+        fechaEntrega,
+        imagenUrl,
+        fechaPrimerVencimiento,
+        frecuenciaDias,
+        recargoPorcentaje,
+      });
       onCreated();
     } finally {
       setSaving(false);
@@ -134,6 +149,53 @@ function NuevoColegioModal({ onClose, onCreated }) {
               value={montoSena}
               onChange={(e) => setMontoSena(e.target.value)}
               placeholder="0"
+            />
+          </div>
+          <div className="form-row">
+            <div className="field">
+              <label>Vencimiento 1° cuota (opcional)</label>
+              <input
+                type="date"
+                value={fechaPrimerVencimiento}
+                onChange={(e) => setFechaPrimerVencimiento(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Frecuencia entre cuotas (días)</label>
+              <input
+                type="number"
+                min="1"
+                value={frecuenciaDias}
+                onChange={(e) => setFrecuenciaDias(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label>Recargo por pago fuera de término (%, opcional)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={recargoPorcentaje}
+              onChange={(e) => setRecargoPorcentaje(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          <div className="field">
+            <label>Fecha de entrega aproximada (opcional)</label>
+            <input
+              type="date"
+              value={fechaEntrega}
+              onChange={(e) => setFechaEntrega(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>Link a la foto del diseño (opcional)</label>
+            <input
+              type="url"
+              placeholder="https://..."
+              value={imagenUrl}
+              onChange={(e) => setImagenUrl(e.target.value)}
             />
           </div>
           <div className="modal-actions">

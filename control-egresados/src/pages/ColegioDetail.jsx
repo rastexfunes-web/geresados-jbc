@@ -32,7 +32,7 @@ export default function ColegioDetail() {
     const entries = await Promise.all(
       al.map(async (a) => {
         const cuotas = await listCuotasAlumno(a.id);
-        return [a.id, resumenDeuda(cuotas)];
+        return [a.id, resumenDeuda(cuotas, c)];
       })
     );
     setResumenes(Object.fromEntries(entries));
@@ -138,6 +138,9 @@ export default function ColegioDetail() {
           {colegio.fechaEntrega && (
             <div>Entrega aproximada: <strong style={{ color: "var(--navy)" }}>{formatFecha(colegio.fechaEntrega)}</strong></div>
           )}
+          {colegio.recargoPorcentaje > 0 && (
+            <div>Recargo por mora: <strong style={{ color: "var(--navy)" }}>{colegio.recargoPorcentaje}%</strong></div>
+          )}
         </div>
       </div>
 
@@ -235,13 +238,22 @@ function formatFecha(fechaISO) {
 function EditarColegioModal({ colegio, onClose, onSaved }) {
   const [fechaEntrega, setFechaEntrega] = useState(colegio.fechaEntrega || "");
   const [imagenUrl, setImagenUrl] = useState(colegio.imagenUrl || "");
+  const [fechaPrimerVencimiento, setFechaPrimerVencimiento] = useState(colegio.fechaPrimerVencimiento || "");
+  const [frecuenciaDias, setFrecuenciaDias] = useState(colegio.frecuenciaDias || 30);
+  const [recargoPorcentaje, setRecargoPorcentaje] = useState(colegio.recargoPorcentaje || "");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      await actualizarColegio(colegio.id, { fechaEntrega, imagenUrl });
+      await actualizarColegio(colegio.id, {
+        fechaEntrega,
+        imagenUrl,
+        fechaPrimerVencimiento,
+        frecuenciaDias: Number(frecuenciaDias) || 30,
+        recargoPorcentaje: Number(recargoPorcentaje) || 0,
+      });
       onSaved();
     } finally {
       setSaving(false);
@@ -261,6 +273,39 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
             <label>Link a la foto del diseño</label>
             <input type="url" placeholder="https://..." value={imagenUrl} onChange={(e) => setImagenUrl(e.target.value)} />
           </div>
+          <div className="form-row">
+            <div className="field">
+              <label>Vencimiento 1° cuota</label>
+              <input
+                type="date"
+                value={fechaPrimerVencimiento}
+                onChange={(e) => setFechaPrimerVencimiento(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Frecuencia entre cuotas (días)</label>
+              <input
+                type="number"
+                min="1"
+                value={frecuenciaDias}
+                onChange={(e) => setFrecuenciaDias(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label>Recargo por pago fuera de término (%)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={recargoPorcentaje}
+              onChange={(e) => setRecargoPorcentaje(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          <p style={{ fontSize: 12, color: "var(--slate)" }}>
+            Estos cambios de vencimiento y recargo solo aplican a los alumnos que cargues de ahora en adelante.
+          </p>
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={saving}>

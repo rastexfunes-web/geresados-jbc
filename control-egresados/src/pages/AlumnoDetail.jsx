@@ -7,6 +7,9 @@ import {
   resumenDeuda,
   marcarCuotaPagaManual,
   desmarcarCuota,
+  esCuotaVencida,
+  montoConRecargo,
+  formatFechaAR,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
 
@@ -41,7 +44,7 @@ export default function AlumnoDetail() {
 
   if (!alumno || !colegio || !cuotas) return <div className="empty">Cargando…</div>;
 
-  const resumen = resumenDeuda(cuotas);
+  const resumen = resumenDeuda(cuotas, colegio);
 
   async function handleGenerarCupon(cuota) {
     setError("");
@@ -147,6 +150,7 @@ export default function AlumnoDetail() {
           <thead>
             <tr>
               <th>Cuota</th>
+              <th>Vencimiento</th>
               <th>Monto</th>
               <th>Estado</th>
               <th>Método</th>
@@ -154,54 +158,68 @@ export default function AlumnoDetail() {
             </tr>
           </thead>
           <tbody>
-            {cuotas.map((c) => (
-              <tr key={c.id}>
-                <td>{c.esSena ? "Seña" : `#${c.numero}`}</td>
-                <td>${Number(c.monto).toLocaleString("es-AR")}</td>
-                <td>
-                  <span className={`badge ${c.estado === "pagada" ? "badge-green" : "badge-rust"}`}>
-                    {c.estado === "pagada" ? "Pagada" : "Pendiente"}
-                  </span>
-                </td>
-                <td style={{ fontSize: 13, color: "var(--slate)" }}>
-                  {c.metodoPago === "mercadopago" ? "Mercado Pago" : c.metodoPago === "manual" ? "Manual" : "—"}
-                </td>
-                <td style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  {c.estado !== "pagada" && (
-                    <>
+            {cuotas.map((c) => {
+              const vencida = esCuotaVencida(c);
+              const monto = montoConRecargo(c, colegio);
+              return (
+                <tr key={c.id}>
+                  <td>{c.esSena ? "Seña" : `#${c.numero}`}</td>
+                  <td style={{ fontSize: 13, color: "var(--slate)" }}>
+                    {c.fechaVencimiento ? formatFechaAR(c.fechaVencimiento) : "—"}
+                  </td>
+                  <td>
+                    ${Number(monto).toLocaleString("es-AR")}
+                    {vencida && monto !== c.monto && (
+                      <div style={{ fontSize: 11, color: "var(--rust)" }}>
+                        (${Number(c.monto).toLocaleString("es-AR")} + recargo)
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <span className={`badge ${c.estado === "pagada" ? "badge-green" : vencida ? "badge-rust" : "badge-gold"}`}>
+                      {c.estado === "pagada" ? "Pagada" : vencida ? "Vencida" : "Pendiente"}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: 13, color: "var(--slate)" }}>
+                    {c.metodoPago === "mercadopago" ? "Mercado Pago" : c.metodoPago === "manual" ? "Manual" : "—"}
+                  </td>
+                  <td style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    {c.estado !== "pagada" && (
+                      <>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          disabled={busyCuotaId === c.id}
+                          onClick={() => handleGenerarCupon(c)}
+                        >
+                          {c.mpInitPoint ? "Reenviar cupón" : "Generar cupón"}
+                        </button>
+                        {c.mpInitPoint && (
+                          <a className="btn btn-outline btn-sm" href={c.mpInitPoint} target="_blank" rel="noreferrer">
+                            Abrir link
+                          </a>
+                        )}
+                        <button
+                          className="btn btn-gold btn-sm"
+                          disabled={busyCuotaId === c.id}
+                          onClick={() => handleMarcarManual(c)}
+                        >
+                          Marcar pagada
+                        </button>
+                      </>
+                    )}
+                    {c.estado === "pagada" && (
                       <button
-                        className="btn btn-outline btn-sm"
+                        className="btn btn-ghost btn-sm"
                         disabled={busyCuotaId === c.id}
-                        onClick={() => handleGenerarCupon(c)}
+                        onClick={() => handleDesmarcar(c)}
                       >
-                        {c.mpInitPoint ? "Reenviar cupón" : "Generar cupón"}
+                        Deshacer
                       </button>
-                      {c.mpInitPoint && (
-                        <a className="btn btn-outline btn-sm" href={c.mpInitPoint} target="_blank" rel="noreferrer">
-                          Abrir link
-                        </a>
-                      )}
-                      <button
-                        className="btn btn-gold btn-sm"
-                        disabled={busyCuotaId === c.id}
-                        onClick={() => handleMarcarManual(c)}
-                      >
-                        Marcar pagada
-                      </button>
-                    </>
-                  )}
-                  {c.estado === "pagada" && (
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      disabled={busyCuotaId === c.id}
-                      onClick={() => handleDesmarcar(c)}
-                    >
-                      Deshacer
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
