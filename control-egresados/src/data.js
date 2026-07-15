@@ -63,7 +63,7 @@ export async function getAlumno(alumnoId) {
 }
 
 // Crea el alumno y genera automáticamente sus cuotas según el plan del colegio
-export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, telefono, tipoPrenda }, colegio) {
+export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, telefono, prendaSuperior, prendaAbrigo }, colegio) {
   const alumnoRef = await addDoc(collection(db, "alumnos"), {
     colegioId,
     nombre,
@@ -71,7 +71,8 @@ export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, tel
     apodo: apodo || "",
     dni: dni || "",
     telefono: telefono || "",
-    tipoPrenda: tipoPrenda || "",
+    prendaSuperior: prendaSuperior || "",
+    prendaAbrigo: prendaAbrigo || "",
     createdAt: serverTimestamp(),
   });
 
