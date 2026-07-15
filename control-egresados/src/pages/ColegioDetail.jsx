@@ -105,3 +105,136 @@ export default function ColegioDetail() {
                     <td onClick={(e) => e.stopPropagation()}>
                       <button
                         className="btn btn-danger btn-sm"
+                        onClick={async () => {
+                          if (confirm(`¿Eliminar a ${a.nombre} ${a.apellido}? Se borran también sus cuotas.`)) {
+                            await eliminarAlumno(a.id);
+                            refresh();
+                          }
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showModal && (
+        <NuevoAlumnoModal
+          colegio={colegio}
+          onClose={() => setShowModal(false)}
+          onCreated={() => {
+            setShowModal(false);
+            refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+const PRENDAS_SUPERIOR = ["Remera", "Chomba"];
+const PRENDAS_ABRIGO = ["Campera", "Buzo"];
+
+function NuevoAlumnoModal({ colegio, onClose, onCreated }) {
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [apodo, setApodo] = useState("");
+  const [dni, setDni] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [prendaSuperior, setPrendaSuperior] = useState("");
+  const [prendaAbrigo, setPrendaAbrigo] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await crearAlumno(
+        { colegioId: colegio.id, nombre, apellido, apodo, dni, telefono, prendaSuperior, prendaAbrigo },
+        colegio
+      );
+      onCreated();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h2>Nuevo alumno — {colegio.nombre}</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-row">
+            <div className="field">
+              <label>Nombre</label>
+              <input value={nombre} onChange={(e) => setNombre(e.target.value)} required autoFocus />
+            </div>
+            <div className="field">
+              <label>Apellido</label>
+              <input value={apellido} onChange={(e) => setApellido(e.target.value)} required />
+            </div>
+          </div>
+          <div className="field">
+            <label>Apodo (opcional)</label>
+            <input value={apodo} onChange={(e) => setApodo(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Remera o chomba</label>
+            <div className="chip-group">
+              {PRENDAS_SUPERIOR.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`chip ${prendaSuperior === p ? "selected" : ""}`}
+                  onClick={() => setPrendaSuperior(prendaSuperior === p ? "" : p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label>Campera o buzo</label>
+            <div className="chip-group">
+              {PRENDAS_ABRIGO.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`chip ${prendaAbrigo === p ? "selected" : ""}`}
+                  onClick={() => setPrendaAbrigo(prendaAbrigo === p ? "" : p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="field">
+              <label>DNI (opcional)</label>
+              <input value={dni} onChange={(e) => setDni(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Teléfono (opcional)</label>
+              <input value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: "var(--slate)" }}>
+            Se van a generar automáticamente {colegio.cantidadCuotas} cuotas de $
+            {Number(colegio.montoCuota).toLocaleString("es-AR")} para este alumno.
+          </p>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? "Creando…" : "Crear alumno"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
