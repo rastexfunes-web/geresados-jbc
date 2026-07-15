@@ -27,12 +27,14 @@ export async function getColegio(colegioId) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
-export async function crearColegio({ nombre, cantidadCuotas, montoCuota, montoSena }) {
+export async function crearColegio({ nombre, cantidadCuotas, montoCuota, montoSena, fechaEntrega, imagenUrl }) {
   return addDoc(collection(db, "colegios"), {
     nombre,
     cantidadCuotas: Number(cantidadCuotas),
     montoCuota: Number(montoCuota),
     montoSena: Number(montoSena) || 0,
+    fechaEntrega: fechaEntrega || "",
+    imagenUrl: imagenUrl || "",
     createdAt: serverTimestamp(),
   });
 }
@@ -63,7 +65,7 @@ export async function getAlumno(alumnoId) {
 }
 
 // Crea el alumno y genera automáticamente sus cuotas según el plan del colegio
-export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, telefono, prendaSuperior, prendaAbrigo }, colegio) {
+export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, telefono, prendaSuperior, prendaAbrigo, talleSuperior, talleAbrigo }, colegio) {
   const alumnoRef = await addDoc(collection(db, "alumnos"), {
     colegioId,
     nombre,
@@ -73,6 +75,8 @@ export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, tel
     telefono: telefono || "",
     prendaSuperior: prendaSuperior || "",
     prendaAbrigo: prendaAbrigo || "",
+    talleSuperior: talleSuperior || "",
+    talleAbrigo: talleAbrigo || "",
     createdAt: serverTimestamp(),
   });
 
