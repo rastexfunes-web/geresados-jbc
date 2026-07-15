@@ -27,11 +27,12 @@ export async function getColegio(colegioId) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
-export async function crearColegio({ nombre, cantidadCuotas, montoCuota }) {
+export async function crearColegio({ nombre, cantidadCuotas, montoCuota, montoSena }) {
   return addDoc(collection(db, "colegios"), {
     nombre,
     cantidadCuotas: Number(cantidadCuotas),
     montoCuota: Number(montoCuota),
+    montoSena: Number(montoSena) || 0,
     createdAt: serverTimestamp(),
   });
 }
@@ -62,23 +63,46 @@ export async function getAlumno(alumnoId) {
 }
 
 // Crea el alumno y genera automáticamente sus cuotas según el plan del colegio
-export async function crearAlumno({ colegioId, nombre, apellido, dni, telefono }, colegio) {
+export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, telefono, tipoPrenda }, colegio) {
   const alumnoRef = await addDoc(collection(db, "alumnos"), {
     colegioId,
     nombre,
     apellido,
+    apodo: apodo || "",
     dni: dni || "",
     telefono: telefono || "",
+    tipoPrenda: tipoPrenda || "",
     createdAt: serverTimestamp(),
   });
 
   const batch = writeBatch(db);
+
+  // La seña se guarda como un ítem especial (numero 0) para que aparezca
+  // primero y se pueda cobrar y marcar igual que una cuota.
+  if (colegio.montoSena > 0) {
+    const senaRef = doc(collection(db, "cuotas"));
+    batch.set(senaRef, {
+      alumnoId: alumnoRef.id,
+      colegioId,
+      numero: 0,
+      esSena: true,
+      monto: colegio.montoSena,
+      estado: "pendiente",
+      metodoPago: null,
+      mpPreferenceId: null,
+      mpInitPoint: null,
+      fechaPago: null,
+      createdAt: serverTimestamp(),
+    });
+  }
+
   for (let i = 1; i <= colegio.cantidadCuotas; i++) {
     const cuotaRef = doc(collection(db, "cuotas"));
     batch.set(cuotaRef, {
       alumnoId: alumnoRef.id,
       colegioId,
       numero: i,
+      esSena: false,
       monto: colegio.montoCuota,
       estado: "pendiente", // pendiente | pagada
       metodoPago: null, // "mercadopago" | "manual"

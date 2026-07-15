@@ -289,6 +289,7 @@ button {
   flex-direction: column;
   gap: 5px;
   margin-bottom: 14px;
+  min-width: 0;
 }
 
 .field label {
@@ -297,23 +298,51 @@ button {
   color: var(--navy);
 }
 
-.field input {
+.field input,
+.field select {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 9px 12px;
   font-size: 14px;
   font-family: inherit;
   background: var(--paper);
+  width: 100%;
+  min-width: 0;
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   outline: 2px solid var(--gold-soft);
   outline-offset: 1px;
   border-color: var(--gold);
 }
 
-.form-row { display: flex; gap: 12px; }
-.form-row .field { flex: 1; }
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--slate);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chip:hover { border-color: var(--slate); color: var(--navy); }
+
+.chip.selected {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--cream);
+}
+
+.form-row { display: flex; gap: 12px; min-width: 0; }
+.form-row .field { flex: 1; min-width: 0; }
 
 /* ---------- Modal ---------- */
 

@@ -83,14 +83,26 @@ export default function AlumnoDetail() {
       <div className="page-header">
         <div>
           <div className="eyebrow">Alumno</div>
-          <h1>{alumno.apellido}, {alumno.nombre}</h1>
+          <h1>
+            {alumno.apellido}, {alumno.nombre}
+            {alumno.apodo && <span style={{ color: "var(--slate)", fontSize: 20 }}> "{alumno.apodo}"</span>}
+          </h1>
+          {alumno.tipoPrenda && (
+            <div style={{ marginTop: 6 }}>
+              <span className="badge badge-gold">{alumno.tipoPrenda}</span>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="ribbon" style={{ marginBottom: 24 }}>
         {cuotas.map((c) => (
-          <div key={c.id} className={`ribbon-seg ${c.estado === "pagada" ? "pagada" : ""}`} title={`Cuota ${c.numero}`}>
-            {c.numero}
+          <div
+            key={c.id}
+            className={`ribbon-seg ${c.estado === "pagada" ? "pagada" : ""}`}
+            title={c.esSena ? "Seña" : `Cuota ${c.numero}`}
+          >
+            {c.esSena ? "S" : c.numero}
           </div>
         ))}
       </div>
@@ -132,7 +144,7 @@ export default function AlumnoDetail() {
           <tbody>
             {cuotas.map((c) => (
               <tr key={c.id}>
-                <td>#{c.numero}</td>
+                <td>{c.esSena ? "Seña" : `#${c.numero}`}</td>
                 <td>${Number(c.monto).toLocaleString("es-AR")}</td>
                 <td>
                   <span className={`badge ${c.estado === "pagada" ? "badge-green" : "badge-rust"}`}>

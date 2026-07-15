@@ -8,10 +8,11 @@ const crearPreferenceFn = httpsCallable(functions, "crearPreferenceMP");
 // Pide al backend que genere el cupón de pago (preference) de Mercado Pago
 // para una cuota puntual, y guarda el link generado en Firestore.
 export async function generarCuponCuota(cuota, alumno, colegio) {
+  const detalle = cuota.esSena ? "Seña" : `Cuota ${cuota.numero}/${colegio.cantidadCuotas}`;
   const { data } = await crearPreferenceFn({
     cuotaId: cuota.id,
     alumnoId: alumno.id,
-    titulo: `${colegio.nombre} - ${alumno.apellido} ${alumno.nombre} - Cuota ${cuota.numero}/${colegio.cantidadCuotas}`,
+    titulo: `${colegio.nombre} - ${alumno.apellido} ${alumno.nombre} - ${detalle}`,
     monto: cuota.monto,
   });
 

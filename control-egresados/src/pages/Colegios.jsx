@@ -42,6 +42,7 @@ export default function Colegios() {
               <h3>{c.nombre}</h3>
               <div className="meta">
                 {c.cantidadCuotas} cuotas de ${Number(c.montoCuota).toLocaleString("es-AR")}
+                {c.montoSena > 0 && <> + seña ${Number(c.montoSena).toLocaleString("es-AR")}</>}
               </div>
               <button
                 className="btn btn-danger btn-sm"
@@ -78,13 +79,14 @@ function NuevoColegioModal({ onClose, onCreated }) {
   const [nombre, setNombre] = useState("");
   const [cantidadCuotas, setCantidadCuotas] = useState(6);
   const [montoCuota, setMontoCuota] = useState("");
+  const [montoSena, setMontoSena] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      await crearColegio({ nombre, cantidadCuotas, montoCuota });
+      await crearColegio({ nombre, cantidadCuotas, montoCuota, montoSena });
       onCreated();
     } finally {
       setSaving(false);
@@ -122,6 +124,17 @@ function NuevoColegioModal({ onClose, onCreated }) {
                 required
               />
             </div>
+          </div>
+          <div className="field">
+            <label>Seña ($, opcional)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={montoSena}
+              onChange={(e) => setMontoSena(e.target.value)}
+              placeholder="0"
+            />
           </div>
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
