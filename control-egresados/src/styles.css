@@ -63,6 +63,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 30px;
+  overflow-y: auto;
 }
 
 .sidebar-brand {
@@ -113,6 +114,91 @@ button {
 
 .sidebar-nav a:hover { opacity: 1; background: rgba(255,255,255,0.06); }
 .sidebar-nav a.active { opacity: 1; background: rgba(255,255,255,0.1); font-weight: 600; }
+
+.sidebar-tree {
+  display: flex;
+  flex-direction: column;
+  margin-top: 2px;
+  overflow-y: auto;
+}
+
+.sidebar-loading {
+  font-size: 12px;
+  color: var(--slate-light);
+  padding: 6px 12px;
+}
+
+.sidebar-colegio-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--cream);
+  opacity: 0.75;
+  font-size: 13px;
+  padding: 7px 12px 7px 20px;
+  border-radius: 8px;
+}
+
+.sidebar-colegio-btn:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+.sidebar-colegio-btn.active { opacity: 1; background: rgba(255,255,255,0.1); font-weight: 600; }
+
+.sidebar-colegio-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  display: inline-block;
+  width: 10px;
+  flex-shrink: 0;
+  font-size: 12px;
+  transition: transform 0.15s ease;
+  color: var(--slate-light);
+}
+
+.chevron.open { transform: rotate(90deg); }
+
+.sidebar-alumnos {
+  display: flex;
+  flex-direction: column;
+  padding-left: 20px;
+}
+
+.sidebar-alumno-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--cream);
+  opacity: 0.7;
+  font-size: 12.5px;
+  padding: 6px 12px 6px 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-alumno-btn:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+.sidebar-alumno-btn.active { opacity: 1; background: rgba(255,255,255,0.1); font-weight: 600; }
+
+.pago-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--slate-light);
+}
+
+.pago-dot.ok { background: #6FCF97; }
+.pago-dot.debe { background: #E8917A; }
 
 .sidebar-footer {
   margin-top: auto;
