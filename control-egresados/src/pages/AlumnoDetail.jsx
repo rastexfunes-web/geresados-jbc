@@ -91,9 +91,17 @@ export default function AlumnoDetail() {
             {alumno.apodo && <span style={{ color: "var(--slate)", fontSize: 20 }}> "{alumno.apodo}"</span>}
           </h1>
           {(alumno.prendaSuperior || alumno.prendaAbrigo) && (
-            <div style={{ marginTop: 6, display: "flex", gap: 6 }}>
-              {alumno.prendaSuperior && <span className="badge badge-gold">{alumno.prendaSuperior}</span>}
-              {alumno.prendaAbrigo && <span className="badge badge-gold">{alumno.prendaAbrigo}</span>}
+            <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {alumno.prendaSuperior && (
+                <span className="badge badge-gold">
+                  {alumno.prendaSuperior}{alumno.talleSuperior ? ` · talle ${alumno.talleSuperior}` : ""}
+                </span>
+              )}
+              {alumno.prendaAbrigo && (
+                <span className="badge badge-gold">
+                  {alumno.prendaAbrigo}{alumno.talleAbrigo ? ` · talle ${alumno.talleAbrigo}` : ""}
+                </span>
+              )}
             </div>
           )}
         </div>

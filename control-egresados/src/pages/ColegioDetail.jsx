@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   getColegio,
+  actualizarColegio,
   listAlumnos,
   crearAlumno,
   eliminarAlumno,
@@ -16,6 +17,7 @@ export default function ColegioDetail() {
   const [alumnos, setAlumnos] = useState(null);
   const [resumenes, setResumenes] = useState({});
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   async function refresh() {
     const c = await getColegio(colegioId);
@@ -43,6 +45,58 @@ export default function ColegioDetail() {
 
   if (!colegio) return <div className="empty">Cargando…</div>;
 
+  function handleImprimirTalles() {
+    const filas = alumnos
+      .map(
+        (a) => `
+        <tr>
+          <td>${a.apellido}, ${a.nombre}</td>
+          <td>${a.apodo || "—"}</td>
+          <td>${a.talleSuperior || "—"}</td>
+          <td>${a.talleAbrigo || "—"}</td>
+        </tr>`
+      )
+      .join("");
+
+    const html = `
+      <html>
+        <head>
+          <title>Talles — ${colegio.nombre}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #17233F; }
+            h1 { font-size: 20px; margin-bottom: 2px; }
+            .sub { color: #5B6472; font-size: 13px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; font-size: 13px; }
+            th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; }
+            th { background: #17233F; color: white; }
+            tr:nth-child(even) { background: #F7F5EF; }
+          </style>
+        </head>
+        <body>
+          <h1>${colegio.nombre} — Talles para producción</h1>
+          <div class="sub">${alumnos.length} alumnos${colegio.fechaEntrega ? ` · Entrega estimada: ${formatFecha(colegio.fechaEntrega)}` : ""}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Alumno</th>
+                <th>Apodo</th>
+                <th>Talle remera/chomba</th>
+                <th>Talle buzo/campera</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const ventana = window.open("", "_blank");
+    ventana.document.write(html);
+    ventana.document.close();
+    ventana.focus();
+    ventana.print();
+  }
+
   return (
     <div>
       <div className="crumb"><Link to="/">Colegios</Link> / {colegio.nombre}</div>
@@ -51,15 +105,40 @@ export default function ColegioDetail() {
           <div className="eyebrow">Colegio</div>
           <h1>{colegio.nombre}</h1>
         </div>
-        <button className="btn btn-gold" onClick={() => setShowModal(true)}>
-          + Nuevo alumno
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn btn-outline" onClick={() => setShowEditModal(true)}>
+            Editar colegio
+          </button>
+          <button className="btn btn-outline" onClick={handleImprimirTalles} disabled={!alumnos?.length}>
+            Imprimir talles
+          </button>
+          <button className="btn btn-gold" onClick={() => setShowModal(true)}>
+            + Nuevo alumno
+          </button>
+        </div>
       </div>
 
-      <div className="card" style={{ padding: "14px 20px", marginBottom: 24, display: "flex", gap: 24, fontSize: 14, color: "var(--slate)" }}>
-        <div><strong style={{ color: "var(--navy)" }}>{colegio.cantidadCuotas}</strong> cuotas por alumno</div>
-        <div><strong style={{ color: "var(--navy)" }}>${Number(colegio.montoCuota).toLocaleString("es-AR")}</strong> por cuota</div>
-        <div><strong style={{ color: "var(--navy)" }}>{alumnos?.length ?? 0}</strong> alumnos cargados</div>
+      <div className="card" style={{ padding: 20, marginBottom: 24, display: "flex", gap: 20 }}>
+        {colegio.imagenUrl && (
+          <img
+            src={colegio.imagenUrl}
+            alt={`Diseño ${colegio.nombre}`}
+            style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 8, flexShrink: 0 }}
+          />
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "var(--slate)" }}>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <div><strong style={{ color: "var(--navy)" }}>{colegio.cantidadCuotas}</strong> cuotas por alumno</div>
+            <div><strong style={{ color: "var(--navy)" }}>${Number(colegio.montoCuota).toLocaleString("es-AR")}</strong> por cuota</div>
+            {colegio.montoSena > 0 && (
+              <div><strong style={{ color: "var(--navy)" }}>${Number(colegio.montoSena).toLocaleString("es-AR")}</strong> de seña</div>
+            )}
+            <div><strong style={{ color: "var(--navy)" }}>{alumnos?.length ?? 0}</strong> alumnos cargados</div>
+          </div>
+          {colegio.fechaEntrega && (
+            <div>Entrega aproximada: <strong style={{ color: "var(--navy)" }}>{formatFecha(colegio.fechaEntrega)}</strong></div>
+          )}
+        </div>
       </div>
 
       {alumnos?.length === 0 && (
@@ -133,6 +212,63 @@ export default function ColegioDetail() {
           }}
         />
       )}
+
+      {showEditModal && (
+        <EditarColegioModal
+          colegio={colegio}
+          onClose={() => setShowEditModal(false)}
+          onSaved={() => {
+            setShowEditModal(false);
+            refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function formatFecha(fechaISO) {
+  const [y, m, d] = fechaISO.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function EditarColegioModal({ colegio, onClose, onSaved }) {
+  const [fechaEntrega, setFechaEntrega] = useState(colegio.fechaEntrega || "");
+  const [imagenUrl, setImagenUrl] = useState(colegio.imagenUrl || "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await actualizarColegio(colegio.id, { fechaEntrega, imagenUrl });
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h2>Editar {colegio.nombre}</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label>Fecha de entrega aproximada</label>
+            <input type="date" value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Link a la foto del diseño</label>
+            <input type="url" placeholder="https://..." value={imagenUrl} onChange={(e) => setImagenUrl(e.target.value)} />
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? "Guardando…" : "Guardar cambios"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -148,6 +284,8 @@ function NuevoAlumnoModal({ colegio, onClose, onCreated }) {
   const [telefono, setTelefono] = useState("");
   const [prendaSuperior, setPrendaSuperior] = useState("");
   const [prendaAbrigo, setPrendaAbrigo] = useState("");
+  const [talleSuperior, setTalleSuperior] = useState("");
+  const [talleAbrigo, setTalleAbrigo] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
@@ -155,7 +293,18 @@ function NuevoAlumnoModal({ colegio, onClose, onCreated }) {
     setSaving(true);
     try {
       await crearAlumno(
-        { colegioId: colegio.id, nombre, apellido, apodo, dni, telefono, prendaSuperior, prendaAbrigo },
+        {
+          colegioId: colegio.id,
+          nombre,
+          apellido,
+          apodo,
+          dni,
+          telefono,
+          prendaSuperior,
+          prendaAbrigo,
+          talleSuperior,
+          talleAbrigo,
+        },
         colegio
       );
       onCreated();
@@ -199,6 +348,10 @@ function NuevoAlumnoModal({ colegio, onClose, onCreated }) {
             </div>
           </div>
           <div className="field">
+            <label>Talle remera/chomba (opcional)</label>
+            <input value={talleSuperior} onChange={(e) => setTalleSuperior(e.target.value)} placeholder="S, M, L, 12, 14…" />
+          </div>
+          <div className="field">
             <label>Campera o buzo</label>
             <div className="chip-group">
               {PRENDAS_ABRIGO.map((p) => (
@@ -212,6 +365,10 @@ function NuevoAlumnoModal({ colegio, onClose, onCreated }) {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="field">
+            <label>Talle buzo/campera (opcional)</label>
+            <input value={talleAbrigo} onChange={(e) => setTalleAbrigo(e.target.value)} placeholder="S, M, L, 12, 14…" />
           </div>
           <div className="form-row">
             <div className="field">
