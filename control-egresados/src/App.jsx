@@ -23,7 +23,7 @@ export default function App() {
           >
             <Route index element={<Colegios />} />
             <Route path="colegios/:colegioId" element={<ColegioDetail />} />
-            <Route path="alumnos/:alumnoId" element={<AlumnoDetail />} />
+            <Route path="colegios/:colegioId/alumnos/:alumnoId" element={<AlumnoDetail />} />
           </Route>
         </Routes>
       </BrowserRouter>
