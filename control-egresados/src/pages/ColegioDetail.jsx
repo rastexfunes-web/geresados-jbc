@@ -56,7 +56,9 @@ export default function ColegioDetail() {
         <tr>
           <td>${a.apellido}, ${a.nombre}</td>
           <td>${a.apodo || "—"}</td>
+          <td>${a.prendaSuperior || "—"}</td>
           <td>${a.talleSuperior || "—"}</td>
+          <td>${a.prendaAbrigo || "—"}</td>
           <td>${a.talleAbrigo || "—"}</td>
         </tr>`
       )
@@ -84,8 +86,10 @@ export default function ColegioDetail() {
               <tr>
                 <th>Alumno</th>
                 <th>Apodo</th>
-                <th>Talle remera/chomba</th>
-                <th>Talle buzo/campera</th>
+                <th>Remera/Chomba</th>
+                <th>Talle</th>
+                <th>Campera/Buzo</th>
+                <th>Talle</th>
               </tr>
             </thead>
             <tbody>${filas}</tbody>
