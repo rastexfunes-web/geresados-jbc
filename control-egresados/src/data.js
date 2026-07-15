@@ -164,6 +164,26 @@ export function montoConRecargo(cuota, colegio) {
   return Math.round(cuota.monto * (1 + recargo / 100));
 }
 
+/* ---------- Contable (vista global) ---------- */
+
+// Una cuota sin fecha de vencimiento asignada (ej. alumnos viejos, o la
+// seña) se considera ya devengada, para no perderla de la contabilidad.
+export function cuotaYaDevengada(cuota) {
+  if (!cuota.fechaVencimiento) return true;
+  const hoy = new Date().toISOString().slice(0, 10);
+  return cuota.fechaVencimiento <= hoy;
+}
+
+export async function listTodosLosAlumnos() {
+  const snap = await getDocs(collection(db, "alumnos"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function listTodasLasCuotas() {
+  const snap = await getDocs(collection(db, "cuotas"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 export async function actualizarAlumno(alumnoId, data) {
   return updateDoc(doc(db, "alumnos", alumnoId), data);
 }

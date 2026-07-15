@@ -71,6 +71,9 @@ export default function Layout() {
           <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
             Colegios
           </NavLink>
+          <NavLink to="/contable" className={({ isActive }) => (isActive ? "active" : "")}>
+            Contable
+          </NavLink>
 
           <div className="sidebar-tree">
             {colegios === null && <div className="sidebar-loading">Cargando…</div>}
