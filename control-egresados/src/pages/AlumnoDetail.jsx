@@ -11,7 +11,7 @@ import {
 import { generarCuponCuota } from "../mercadopago";
 
 export default function AlumnoDetail() {
-  const { alumnoId } = useParams();
+  const { colegioId, alumnoId } = useParams();
   const navigate = useNavigate();
   const [alumno, setAlumno] = useState(null);
   const [colegio, setColegio] = useState(null);
@@ -20,13 +20,16 @@ export default function AlumnoDetail() {
   const [error, setError] = useState("");
 
   async function refresh() {
-    const a = await getAlumno(alumnoId);
-    if (!a) {
+    const [a, c, cu] = await Promise.all([
+      getAlumno(alumnoId),
+      getColegio(colegioId),
+      listCuotasAlumno(alumnoId),
+    ]);
+    if (!a || !c) {
       navigate("/");
       return;
     }
     setAlumno(a);
-    const [c, cu] = await Promise.all([getColegio(a.colegioId), listCuotasAlumno(alumnoId)]);
     setColegio(c);
     setCuotas(cu);
   }
@@ -34,7 +37,7 @@ export default function AlumnoDetail() {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alumnoId]);
+  }, [alumnoId, colegioId]);
 
   if (!alumno || !colegio || !cuotas) return <div className="empty">Cargando…</div>;
 

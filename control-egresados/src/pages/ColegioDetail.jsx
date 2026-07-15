@@ -85,7 +85,7 @@ export default function ColegioDetail() {
               {alumnos.map((a) => {
                 const r = resumenes[a.id];
                 return (
-                  <tr key={a.id} className="clickable" onClick={() => navigate(`/alumnos/${a.id}`)}>
+                  <tr key={a.id} className="clickable" onClick={() => navigate(`/colegios/${colegioId}/alumnos/${a.id}`)}>
                     <td>
                       <strong>{a.apellido}, {a.nombre}</strong>
                       {a.apodo && <span style={{ color: "var(--slate)" }}> "{a.apodo}"</span>}
