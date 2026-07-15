@@ -15,6 +15,12 @@ function fechaPagoISO(cuota) {
   return d.toISOString().slice(0, 10);
 }
 
+function timestampISO(ts) {
+  if (!ts) return null;
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toISOString().slice(0, 10);
+}
+
 function dentroDelRango(fechaISO, desde, hasta) {
   if (!fechaISO) return false;
   if (desde && fechaISO < desde) return false;
@@ -63,12 +69,15 @@ export default function Contable() {
 
     cuotas.forEach((c) => {
       const colegio = colegiosPorId[c.colegioId];
+      const alumno = alumnosPorId[c.alumnoId];
 
       // Facturado en el período: cuotas cuyo vencimiento cae dentro del rango.
-      // Si no hay fecha de vencimiento (alumnos viejos), solo se cuenta
-      // cuando no hay filtro activo, para no perderlas de la contabilidad.
-      const enPeriodoPorVencimiento = c.fechaVencimiento
-        ? dentroDelRango(c.fechaVencimiento, desde, hasta)
+      // La seña no tiene vencimiento propio, así que usamos la fecha de alta
+      // del alumno como referencia. Si tampoco hay alumno (dato huérfano),
+      // solo se cuenta cuando no hay filtro activo.
+      const fechaReferencia = c.fechaVencimiento || timestampISO(alumno?.createdAt);
+      const enPeriodoPorVencimiento = fechaReferencia
+        ? dentroDelRango(fechaReferencia, desde, hasta)
         : !hayFiltro;
       if (enPeriodoPorVencimiento) {
         facturado += c.monto;
