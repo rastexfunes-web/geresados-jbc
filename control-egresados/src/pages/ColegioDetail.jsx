@@ -45,6 +45,10 @@ export default function ColegioDetail() {
 
   if (!colegio) return <div className="empty">Cargando…</div>;
 
+  const totalColegio = alumnos?.length
+    ? ((colegio.montoSena || 0) + colegio.cantidadCuotas * colegio.montoCuota) * alumnos.length
+    : 0;
+
   function handleImprimirTalles() {
     const filas = alumnos
       .map(
@@ -140,6 +144,12 @@ export default function ColegioDetail() {
           )}
           {colegio.recargoPorcentaje > 0 && (
             <div>Recargo por mora: <strong style={{ color: "var(--navy)" }}>{colegio.recargoPorcentaje}%</strong></div>
+          )}
+          {alumnos?.length > 0 && (
+            <div>
+              Importe total a cobrar ({alumnos.length} alumno{alumnos.length !== 1 ? "s" : ""}, cuotas + señas):{" "}
+              <strong style={{ color: "var(--navy)" }}>${totalColegio.toLocaleString("es-AR")}</strong>
+            </div>
           )}
         </div>
       </div>
