@@ -87,9 +87,10 @@ export default function AlumnoDetail() {
             {alumno.apellido}, {alumno.nombre}
             {alumno.apodo && <span style={{ color: "var(--slate)", fontSize: 20 }}> "{alumno.apodo}"</span>}
           </h1>
-          {alumno.tipoPrenda && (
-            <div style={{ marginTop: 6 }}>
-              <span className="badge badge-gold">{alumno.tipoPrenda}</span>
+          {(alumno.prendaSuperior || alumno.prendaAbrigo) && (
+            <div style={{ marginTop: 6, display: "flex", gap: 6 }}>
+              {alumno.prendaSuperior && <span className="badge badge-gold">{alumno.prendaSuperior}</span>}
+              {alumno.prendaAbrigo && <span className="badge badge-gold">{alumno.prendaAbrigo}</span>}
             </div>
           )}
         </div>
