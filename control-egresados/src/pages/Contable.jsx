@@ -34,6 +34,7 @@ export default function Contable() {
   const [cuotas, setCuotas] = useState(null);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+  const [colegioFiltro, setColegioFiltro] = useState("");
 
   useEffect(() => {
     Promise.all([listColegios(), listTodosLosAlumnos(), listTodasLasCuotas()]).then(
@@ -67,7 +68,11 @@ export default function Contable() {
     let enMora = 0;
     const proximos = [];
 
-    cuotas.forEach((c) => {
+    const cuotasFiltradas = colegioFiltro
+      ? cuotas.filter((c) => c.colegioId === colegioFiltro)
+      : cuotas;
+
+    cuotasFiltradas.forEach((c) => {
       const colegio = colegiosPorId[c.colegioId];
       const alumno = alumnosPorId[c.alumnoId];
 
@@ -112,7 +117,7 @@ export default function Contable() {
       saldoPendiente: facturado - cobrado,
       proximos: proximos.slice(0, 30),
     };
-  }, [cuotas, colegiosPorId, desde, hasta, hayFiltro]);
+  }, [cuotas, colegiosPorId, desde, hasta, hayFiltro, colegioFiltro]);
 
   if (!colegios || !alumnos || !cuotas || !resumen) {
     return <div className="empty">Cargando…</div>;
@@ -129,6 +134,15 @@ export default function Contable() {
 
       <div className="card" style={{ padding: "16px 20px", marginBottom: 24, display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div className="field" style={{ marginBottom: 0 }}>
+          <label>Colegio</label>
+          <select value={colegioFiltro} onChange={(e) => setColegioFiltro(e.target.value)}>
+            <option value="">Todos los colegios</option>
+            {colegios.map((c) => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
           <label>Desde</label>
           <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
         </div>
@@ -136,8 +150,8 @@ export default function Contable() {
           <label>Hasta</label>
           <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
         </div>
-        {hayFiltro && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setDesde(""); setHasta(""); }}>
+        {(hayFiltro || colegioFiltro) && (
+          <button className="btn btn-ghost btn-sm" onClick={() => { setDesde(""); setHasta(""); setColegioFiltro(""); }}>
             Ver todo el historial
           </button>
         )}
