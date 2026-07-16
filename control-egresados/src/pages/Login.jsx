@@ -33,8 +33,8 @@ export default function Login() {
   return (
     <div className="login-screen">
       <div className="login-card">
-        <div className="mark"><span className="seal" /> Control de Egresados</div>
-        <div className="sub">JBC Egresados — panel de administración</div>
+        <div className="mark"><span className="seal" /> Egresados</div>
+        <div className="sub">Panel de administración</div>
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label>Email</label>
