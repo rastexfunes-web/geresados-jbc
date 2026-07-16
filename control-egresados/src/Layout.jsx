@@ -87,7 +87,7 @@ export default function Layout() {
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div className="mark"><span className="seal" /> Egresados</div>
-          <div className="sub">JBC Egresados</div>
+          <div className="sub">Panel de administración</div>
         </div>
 
         <nav className="sidebar-nav">
