@@ -20,6 +20,7 @@ export default function Layout() {
   const [alumnosPorColegio, setAlumnosPorColegio] = useState({});
   const [loadingAlumnosId, setLoadingAlumnosId] = useState(null);
   const [vencenHoy, setVencenHoy] = useState([]);
+  const [vencidas, setVencidas] = useState([]);
   const [alertaCerrada, setAlertaCerrada] = useState(false);
 
   useEffect(() => {
@@ -31,10 +32,12 @@ export default function Layout() {
     const hoy = new Date().toISOString().slice(0, 10);
     const [alumnos, cuotas] = await Promise.all([listTodosLosAlumnos(), listTodasLasCuotas()]);
     const alumnosPorId = Object.fromEntries(alumnos.map((a) => [a.id, a]));
-    const hoyCuotas = cuotas
-      .filter((c) => c.estado !== "pagada" && c.fechaVencimiento === hoy)
+    const pendientesConFecha = cuotas
+      .filter((c) => c.estado !== "pagada" && c.fechaVencimiento)
       .map((c) => ({ ...c, alumno: alumnosPorId[c.alumnoId] }));
-    setVencenHoy(hoyCuotas);
+
+    setVencenHoy(pendientesConFecha.filter((c) => c.fechaVencimiento === hoy));
+    setVencidas(pendientesConFecha.filter((c) => c.fechaVencimiento < hoy));
   }
 
   async function refreshColegios() {
@@ -141,25 +144,47 @@ export default function Layout() {
         </div>
       </aside>
       <main className="main">
-        {vencenHoy.length > 0 && !alertaCerrada && (
+        {(vencenHoy.length > 0 || vencidas.length > 0) && !alertaCerrada && (
           <div className="alerta-vencimiento">
             <div>
-              <strong>{vencenHoy.length}</strong> cuota{vencenHoy.length !== 1 ? "s" : ""} vence
-              {vencenHoy.length === 1 ? "" : "n"} hoy: {" "}
-              {vencenHoy.slice(0, 4).map((c, i) => (
-                <span key={c.id}>
-                  {i > 0 && ", "}
-                  {c.alumno ? (
-                    <Link to={`/colegios/${c.colegioId}/alumnos/${c.alumnoId}`}>
-                      {c.alumno.apellido}, {c.alumno.nombre}
-                    </Link>
-                  ) : (
-                    "alumno"
-                  )}
-                </span>
-              ))}
-              {vencenHoy.length > 4 && ` y ${vencenHoy.length - 4} más`}
-              .
+              {vencenHoy.length > 0 && (
+                <div>
+                  <strong>{vencenHoy.length}</strong> cuota{vencenHoy.length !== 1 ? "s" : ""} vence
+                  {vencenHoy.length === 1 ? "" : "n"} hoy: {" "}
+                  {vencenHoy.slice(0, 4).map((c, i) => (
+                    <span key={c.id}>
+                      {i > 0 && ", "}
+                      {c.alumno ? (
+                        <Link to={`/colegios/${c.colegioId}/alumnos/${c.alumnoId}`}>
+                          {c.alumno.apellido}, {c.alumno.nombre}
+                        </Link>
+                      ) : (
+                        "alumno"
+                      )}
+                    </span>
+                  ))}
+                  {vencenHoy.length > 4 && ` y ${vencenHoy.length - 4} más`}.
+                </div>
+              )}
+              {vencidas.length > 0 && (
+                <div style={{ marginTop: vencenHoy.length > 0 ? 4 : 0 }}>
+                  <strong>{vencidas.length}</strong> cuota{vencidas.length !== 1 ? "s" : ""} vencida
+                  {vencidas.length !== 1 ? "s" : ""} sin pagar: {" "}
+                  {vencidas.slice(0, 4).map((c, i) => (
+                    <span key={c.id}>
+                      {i > 0 && ", "}
+                      {c.alumno ? (
+                        <Link to={`/colegios/${c.colegioId}/alumnos/${c.alumnoId}`}>
+                          {c.alumno.apellido}, {c.alumno.nombre}
+                        </Link>
+                      ) : (
+                        "alumno"
+                      )}
+                    </span>
+                  ))}
+                  {vencidas.length > 4 && ` y ${vencidas.length - 4} más`}.
+                </div>
+              )}
             </div>
             <button className="alerta-cerrar" onClick={() => setAlertaCerrada(true)}>✕</button>
           </div>
