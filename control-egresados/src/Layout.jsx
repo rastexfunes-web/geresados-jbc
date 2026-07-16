@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { listColegios, listAlumnos, listCuotasAlumno, resumenDeuda } from "./data";
+import {
+  listColegios,
+  listAlumnos,
+  listCuotasAlumno,
+  resumenDeuda,
+  listTodosLosAlumnos,
+  listTodasLasCuotas,
+} from "./data";
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -12,10 +19,23 @@ export default function Layout() {
   const [expandedId, setExpandedId] = useState(null);
   const [alumnosPorColegio, setAlumnosPorColegio] = useState({});
   const [loadingAlumnosId, setLoadingAlumnosId] = useState(null);
+  const [vencenHoy, setVencenHoy] = useState([]);
+  const [alertaCerrada, setAlertaCerrada] = useState(false);
 
   useEffect(() => {
     refreshColegios();
+    cargarAlertaHoy();
   }, []);
+
+  async function cargarAlertaHoy() {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const [alumnos, cuotas] = await Promise.all([listTodosLosAlumnos(), listTodasLasCuotas()]);
+    const alumnosPorId = Object.fromEntries(alumnos.map((a) => [a.id, a]));
+    const hoyCuotas = cuotas
+      .filter((c) => c.estado !== "pagada" && c.fechaVencimiento === hoy)
+      .map((c) => ({ ...c, alumno: alumnosPorId[c.alumnoId] }));
+    setVencenHoy(hoyCuotas);
+  }
 
   async function refreshColegios() {
     setColegios(await listColegios());
@@ -121,6 +141,29 @@ export default function Layout() {
         </div>
       </aside>
       <main className="main">
+        {vencenHoy.length > 0 && !alertaCerrada && (
+          <div className="alerta-vencimiento">
+            <div>
+              <strong>{vencenHoy.length}</strong> cuota{vencenHoy.length !== 1 ? "s" : ""} vence
+              {vencenHoy.length === 1 ? "" : "n"} hoy: {" "}
+              {vencenHoy.slice(0, 4).map((c, i) => (
+                <span key={c.id}>
+                  {i > 0 && ", "}
+                  {c.alumno ? (
+                    <Link to={`/colegios/${c.colegioId}/alumnos/${c.alumnoId}`}>
+                      {c.alumno.apellido}, {c.alumno.nombre}
+                    </Link>
+                  ) : (
+                    "alumno"
+                  )}
+                </span>
+              ))}
+              {vencenHoy.length > 4 && ` y ${vencenHoy.length - 4} más`}
+              .
+            </div>
+            <button className="alerta-cerrar" onClick={() => setAlertaCerrada(true)}>✕</button>
+          </div>
+        )}
         <Outlet />
       </main>
     </div>
