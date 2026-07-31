@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
-import {
-  listTrabajos,
-  crearTrabajo,
-  marcarTrabajoPagado,
-  desmarcarTrabajoPagado,
-  eliminarTrabajo,
-} from "../data";
+import { Link } from "react-router-dom";
+import { listTrabajos, crearTrabajo } from "../data";
+
+function nuevoProducto() {
+  return { nombre: "", cantidad: "", precioUnitario: "", talles: [{ talle: "", cantidad: "" }] };
+}
 
 export default function Trabajos() {
   const [trabajos, setTrabajos] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [busyId, setBusyId] = useState(null);
 
   async function refresh() {
     setTrabajos(await listTrabajos());
@@ -19,22 +17,6 @@ export default function Trabajos() {
   useEffect(() => {
     refresh();
   }, []);
-
-  async function togglePagado(t) {
-    setBusyId(t.id);
-    try {
-      if (t.pagado) {
-        await desmarcarTrabajoPagado(t.id);
-      } else {
-        await marcarTrabajoPagado(t.id);
-      }
-      refresh();
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  const totalPendiente = trabajos?.filter((t) => !t.pagado).reduce((acc, t) => acc + t.monto, 0) || 0;
 
   return (
     <div>
@@ -48,15 +30,6 @@ export default function Trabajos() {
         </button>
       </div>
 
-      {trabajos?.length > 0 && (
-        <div className="card" style={{ padding: "14px 20px", marginBottom: 24, fontSize: 14, color: "var(--slate)" }}>
-          <strong style={{ color: "var(--navy)" }}>{trabajos.length}</strong> trabajos cargados ·
-          {" "}saldo pendiente de cobro: <strong className={totalPendiente > 0 ? "" : ""} style={{ color: totalPendiente > 0 ? "var(--rust)" : "var(--green)" }}>
-            ${totalPendiente.toLocaleString("es-AR")}
-          </strong>
-        </div>
-      )}
-
       {trabajos === null && <div className="empty">Cargando…</div>}
 
       {trabajos?.length === 0 && (
@@ -67,52 +40,22 @@ export default function Trabajos() {
       )}
 
       {trabajos?.length > 0 && (
-        <div className="card">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Empresa</th>
-                <th>Trabajo</th>
-                <th>Monto</th>
-                <th>Estado</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {trabajos.map((t) => (
-                <tr key={t.id}>
-                  <td><strong>{t.empresa}</strong></td>
-                  <td style={{ color: "var(--slate)" }}>{t.descripcion || "—"}</td>
-                  <td>${Number(t.monto).toLocaleString("es-AR")}</td>
-                  <td>
-                    <span className={`badge ${t.pagado ? "badge-green" : "badge-rust"}`}>
-                      {t.pagado ? "Pagado" : "Pendiente"}
-                    </span>
-                  </td>
-                  <td style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                    <button
-                      className="btn btn-gold btn-sm"
-                      disabled={busyId === t.id}
-                      onClick={() => togglePagado(t)}
-                    >
-                      {t.pagado ? "Marcar pendiente" : "Marcar pagado"}
-                    </button>
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={async () => {
-                        if (confirm(`¿Eliminar el trabajo de "${t.empresa}"?`)) {
-                          await eliminarTrabajo(t.id);
-                          refresh();
-                        }
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid-cards">
+          {trabajos.map((t) => {
+            const saldo = t.total - (t.montoSena || 0);
+            const alDia = t.senaPagada && t.saldoPagado;
+            return (
+              <Link to={`/trabajos/${t.id}`} className="card colegio-card" key={t.id}>
+                <h3>{t.empresa}</h3>
+                <div className="meta">
+                  {t.productos?.length || 0} producto{t.productos?.length !== 1 ? "s" : ""} · Total ${Number(t.total).toLocaleString("es-AR")}
+                </div>
+                <span className={`badge ${alDia ? "badge-green" : "badge-rust"}`} style={{ alignSelf: "flex-start" }}>
+                  {alDia ? "Cobrado" : `Saldo $${saldo.toLocaleString("es-AR")}`}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       )}
 
@@ -129,17 +72,61 @@ export default function Trabajos() {
   );
 }
 
+const FORMAS_PAGO = ["Efectivo", "Transferencia", "Mercado Pago"];
+
 function NuevoTrabajoModal({ onClose, onCreated }) {
   const [empresa, setEmpresa] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [monto, setMonto] = useState("");
+  const [formaPago, setFormaPago] = useState("");
+  const [montoSena, setMontoSena] = useState("");
+  const [productos, setProductos] = useState([nuevoProducto()]);
   const [saving, setSaving] = useState(false);
+
+  function actualizarProducto(i, campo, valor) {
+    setProductos((prev) => prev.map((p, idx) => (idx === i ? { ...p, [campo]: valor } : p)));
+  }
+
+  function agregarProducto() {
+    setProductos((prev) => [...prev, nuevoProducto()]);
+  }
+
+  function quitarProducto(i) {
+    setProductos((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  function actualizarTalle(pIdx, tIdx, campo, valor) {
+    setProductos((prev) =>
+      prev.map((p, idx) => {
+        if (idx !== pIdx) return p;
+        const talles = p.talles.map((t, ti) => (ti === tIdx ? { ...t, [campo]: valor } : t));
+        return { ...p, talles };
+      })
+    );
+  }
+
+  function agregarTalle(pIdx) {
+    setProductos((prev) =>
+      prev.map((p, idx) => (idx === pIdx ? { ...p, talles: [...p.talles, { talle: "", cantidad: "" }] } : p))
+    );
+  }
+
+  function quitarTalle(pIdx, tIdx) {
+    setProductos((prev) =>
+      prev.map((p, idx) =>
+        idx === pIdx ? { ...p, talles: p.talles.filter((_, ti) => ti !== tIdx) } : p
+      )
+    );
+  }
+
+  const totalEstimado = productos.reduce(
+    (acc, p) => acc + (Number(p.cantidad) || 0) * (Number(p.precioUnitario) || 0),
+    0
+  );
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      await crearTrabajo({ empresa, descripcion, monto });
+      await crearTrabajo({ empresa, formaPago, montoSena, productos });
       onCreated();
     } finally {
       setSaving(false);
@@ -148,28 +135,128 @@ function NuevoTrabajoModal({ onClose, onCreated }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" style={{ width: 560 }} onClick={(e) => e.stopPropagation()}>
         <h2>Nuevo trabajo para empresa</h2>
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label>Nombre de la empresa</label>
             <input value={empresa} onChange={(e) => setEmpresa(e.target.value)} required autoFocus />
           </div>
+
+          <label style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>Productos</label>
+          {productos.map((p, pIdx) => (
+            <div key={pIdx} className="producto-row">
+              <div className="form-row">
+                <div className="field">
+                  <label>Producto</label>
+                  <input
+                    value={p.nombre}
+                    onChange={(e) => actualizarProducto(pIdx, "nombre", e.target.value)}
+                    placeholder="Ej: Remera estampada"
+                    required
+                  />
+                </div>
+                <div className="field" style={{ maxWidth: 100 }}>
+                  <label>Cantidad</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={p.cantidad}
+                    onChange={(e) => actualizarProducto(pIdx, "cantidad", e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="field" style={{ maxWidth: 130 }}>
+                  <label>Precio unitario</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={p.precioUnitario}
+                    onChange={(e) => actualizarProducto(pIdx, "precioUnitario", e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginLeft: 4 }}>
+                <label style={{ fontSize: 12, color: "var(--slate)" }}>Talles (opcional)</label>
+                {p.talles.map((t, tIdx) => (
+                  <div key={tIdx} className="form-row" style={{ marginBottom: 6 }}>
+                    <input
+                      style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 8, padding: "7px 10px", fontSize: 13 }}
+                      placeholder="Talle (S, M, L…)"
+                      value={t.talle}
+                      onChange={(e) => actualizarTalle(pIdx, tIdx, "talle", e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      style={{ width: 80, border: "1px solid var(--line)", borderRadius: 8, padding: "7px 10px", fontSize: 13 }}
+                      placeholder="Cant."
+                      value={t.cantidad}
+                      onChange={(e) => actualizarTalle(pIdx, tIdx, "cantidad", e.target.value)}
+                    />
+                    {p.talles.length > 1 && (
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => quitarTalle(pIdx, tIdx)}>✕</button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => agregarTalle(pIdx)}>
+                  + Agregar talle
+                </button>
+              </div>
+
+              {productos.length > 1 && (
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  style={{ marginTop: 8 }}
+                  onClick={() => quitarProducto(pIdx)}
+                >
+                  Quitar producto
+                </button>
+              )}
+              <hr style={{ border: "none", borderTop: "1px solid var(--line)", margin: "16px 0" }} />
+            </div>
+          ))}
+
+          <button type="button" className="btn btn-outline btn-sm" onClick={agregarProducto} style={{ marginBottom: 16 }}>
+            + Agregar otro producto
+          </button>
+
           <div className="field">
-            <label>Descripción del trabajo</label>
-            <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Ej: 50 remeras estampadas" />
+            <label>Forma de pago</label>
+            <div className="chip-group">
+              {FORMAS_PAGO.map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={`chip ${formaPago === f ? "selected" : ""}`}
+                  onClick={() => setFormaPago(formaPago === f ? "" : f)}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
+
           <div className="field">
-            <label>Monto total ($)</label>
+            <label>Seña ($, opcional)</label>
             <input
               type="number"
               min="0"
               step="0.01"
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
-              required
+              value={montoSena}
+              onChange={(e) => setMontoSena(e.target.value)}
+              placeholder="0"
             />
           </div>
+
+          <p style={{ fontSize: 13, color: "var(--slate)" }}>
+            Total estimado: <strong>${totalEstimado.toLocaleString("es-AR")}</strong>
+          </p>
+
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
