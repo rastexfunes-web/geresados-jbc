@@ -172,22 +172,46 @@ export async function listTrabajos() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-export async function crearTrabajo({ empresa, descripcion, monto }) {
+export async function getTrabajo(trabajoId) {
+  const snap = await getDoc(doc(db, "trabajos", trabajoId));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+// productos: [{ nombre, cantidad, precioUnitario, talles: [{ talle, cantidad }] }]
+export async function crearTrabajo({ empresa, formaPago, montoSena, productos }) {
+  const productosLimpios = productos.map((p) => ({
+    nombre: p.nombre,
+    cantidad: Number(p.cantidad) || 0,
+    precioUnitario: Number(p.precioUnitario) || 0,
+    talles: (p.talles || [])
+      .filter((t) => t.talle)
+      .map((t) => ({ talle: t.talle, cantidad: Number(t.cantidad) || 0 })),
+  }));
+
+  const total = productosLimpios.reduce((acc, p) => acc + p.cantidad * p.precioUnitario, 0);
+
   return addDoc(collection(db, "trabajos"), {
     empresa,
-    descripcion: descripcion || "",
-    monto: Number(monto) || 0,
-    pagado: false,
+    formaPago: formaPago || "",
+    productos: productosLimpios,
+    total,
+    montoSena: Number(montoSena) || 0,
+    senaPagada: false,
+    saldoPagado: false,
     createdAt: serverTimestamp(),
   });
 }
 
-export async function marcarTrabajoPagado(trabajoId) {
-  return updateDoc(doc(db, "trabajos", trabajoId), { pagado: true });
+export async function actualizarTrabajo(trabajoId, data) {
+  return updateDoc(doc(db, "trabajos", trabajoId), data);
 }
 
-export async function desmarcarTrabajoPagado(trabajoId) {
-  return updateDoc(doc(db, "trabajos", trabajoId), { pagado: false });
+export async function marcarSenaPagada(trabajoId, pagada) {
+  return updateDoc(doc(db, "trabajos", trabajoId), { senaPagada: pagada });
+}
+
+export async function marcarSaldoPagado(trabajoId, pagado) {
+  return updateDoc(doc(db, "trabajos", trabajoId), { saldoPagado: pagado });
 }
 
 export async function eliminarTrabajo(trabajoId) {
