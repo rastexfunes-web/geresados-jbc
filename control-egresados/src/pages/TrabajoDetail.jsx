@@ -31,28 +31,26 @@ export default function TrabajoDetail() {
   const saldo = trabajo.total - (trabajo.montoSena || 0);
 
   function handleImprimir() {
-    const filasProductos = trabajo.productos
-      .map(
-        (p) => `
-        <tr>
-          <td>${p.nombre}</td>
-          <td>${p.cantidad}</td>
-          <td>$${Number(p.precioUnitario).toLocaleString("es-AR")}</td>
-          <td>$${Number(p.cantidad * p.precioUnitario).toLocaleString("es-AR")}</td>
-        </tr>`
-      )
-      .join("");
-
-    const filasTalles = trabajo.productos
-      .filter((p) => p.talles?.length)
-      .map(
-        (p) => `
-        <tr>
-          <td><strong>${p.nombre}</strong></td>
-          <td>${p.talles.map((t) => `${t.talle}: <strong>${t.cantidad}</strong>`).join(" · ")}</td>
-        </tr>`
-      )
-      .join("");
+    const filas = [];
+    trabajo.productos.forEach((p) => {
+      if (p.talles?.length) {
+        p.talles.forEach((t) => {
+          filas.push(`
+            <tr>
+              <td>${p.nombre}</td>
+              <td>${t.talle}</td>
+              <td style="text-align:center;"><strong>${t.cantidad}</strong></td>
+            </tr>`);
+        });
+      } else {
+        filas.push(`
+          <tr>
+            <td>${p.nombre}</td>
+            <td>—</td>
+            <td style="text-align:center;"><strong>${p.cantidad}</strong></td>
+          </tr>`);
+      }
+    });
 
     const html = `
       <html>
@@ -61,29 +59,22 @@ export default function TrabajoDetail() {
           <style>
             body { font-family: Arial, sans-serif; padding: 24px; color: #17233F; }
             h1 { font-size: 20px; margin-bottom: 2px; }
-            h2 { font-size: 15px; margin: 28px 0 10px; }
             .sub { color: #5B6472; font-size: 13px; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; font-size: 13px; }
-            th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; }
+            table { width: 100%; border-collapse: collapse; font-size: 15px; }
+            th, td { border: 1px solid #ccc; padding: 12px 14px; text-align: left; }
             th { background: #17233F; color: white; }
             tr:nth-child(even) { background: #F7F5EF; }
           </style>
         </head>
         <body>
           <h1>${trabajo.empresa} — Orden de producción</h1>
-          <div class="sub">Forma de pago: ${trabajo.formaPago || "—"} · Total: $${Number(trabajo.total).toLocaleString("es-AR")}</div>
+          <div class="sub">${trabajo.productos.length} producto${trabajo.productos.length !== 1 ? "s" : ""}</div>
           <table>
             <thead>
-              <tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr>
+              <tr><th>Producto</th><th>Talle</th><th style="text-align:center;">Cantidad</th></tr>
             </thead>
-            <tbody>${filasProductos}</tbody>
+            <tbody>${filas.join("")}</tbody>
           </table>
-          ${filasTalles ? `
-          <h2>Desglose de talles</h2>
-          <table>
-            <thead><tr><th>Producto</th><th>Talles</th></tr></thead>
-            <tbody>${filasTalles}</tbody>
-          </table>` : ""}
         </body>
       </html>
     `;
