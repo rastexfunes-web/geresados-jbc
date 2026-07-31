@@ -181,6 +181,7 @@ export async function getTrabajo(trabajoId) {
 export async function crearTrabajo({ empresa, formaPago, montoSena, productos }) {
   const productosLimpios = productos.map((p) => ({
     nombre: p.nombre,
+    color: p.color || "",
     cantidad: Number(p.cantidad) || 0,
     precioUnitario: Number(p.precioUnitario) || 0,
     talles: (p.talles || [])
