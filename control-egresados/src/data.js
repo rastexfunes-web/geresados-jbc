@@ -164,6 +164,36 @@ export function montoConRecargo(cuota, colegio) {
   return Math.round(cuota.monto * (1 + recargo / 100));
 }
 
+/* ---------- Trabajos para empresas ---------- */
+
+export async function listTrabajos() {
+  const q = query(collection(db, "trabajos"), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function crearTrabajo({ empresa, descripcion, monto }) {
+  return addDoc(collection(db, "trabajos"), {
+    empresa,
+    descripcion: descripcion || "",
+    monto: Number(monto) || 0,
+    pagado: false,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function marcarTrabajoPagado(trabajoId) {
+  return updateDoc(doc(db, "trabajos", trabajoId), { pagado: true });
+}
+
+export async function desmarcarTrabajoPagado(trabajoId) {
+  return updateDoc(doc(db, "trabajos", trabajoId), { pagado: false });
+}
+
+export async function eliminarTrabajo(trabajoId) {
+  return deleteDoc(doc(db, "trabajos", trabajoId));
+}
+
 /* ---------- Contable (vista global) ---------- */
 
 // Una cuota sin fecha de vencimiento asignada (ej. alumnos viejos, o la

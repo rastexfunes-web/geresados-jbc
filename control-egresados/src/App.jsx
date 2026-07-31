@@ -7,6 +7,7 @@ import Colegios from "./pages/Colegios";
 import ColegioDetail from "./pages/ColegioDetail";
 import AlumnoDetail from "./pages/AlumnoDetail";
 import Contable from "./pages/Contable";
+import Trabajos from "./pages/Trabajos";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           >
             <Route index element={<Colegios />} />
             <Route path="contable" element={<Contable />} />
+            <Route path="trabajos" element={<Trabajos />} />
             <Route path="colegios/:colegioId" element={<ColegioDetail />} />
             <Route path="colegios/:colegioId/alumnos/:alumnoId" element={<AlumnoDetail />} />
           </Route>
