@@ -179,15 +179,19 @@ export async function getTrabajo(trabajoId) {
 
 // productos: [{ nombre, cantidad, precioUnitario, talles: [{ talle, cantidad }] }]
 export async function crearTrabajo({ empresa, formaPago, montoSena, productos }) {
-  const productosLimpios = productos.map((p) => ({
-    nombre: p.nombre,
-    color: p.color || "",
-    cantidad: Number(p.cantidad) || 0,
-    precioUnitario: Number(p.precioUnitario) || 0,
-    talles: (p.talles || [])
+  const productosLimpios = productos.map((p) => {
+    const talles = (p.talles || [])
       .filter((t) => t.talle)
-      .map((t) => ({ talle: t.talle, cantidad: Number(t.cantidad) || 0 })),
-  }));
+      .map((t) => ({ talle: t.talle, cantidad: Number(t.cantidad) || 0 }));
+    const cantidad = talles.reduce((acc, t) => acc + t.cantidad, 0);
+    return {
+      nombre: p.nombre,
+      color: p.color || "",
+      cantidad,
+      precioUnitario: Number(p.precioUnitario) || 0,
+      talles,
+    };
+  });
 
   const total = productosLimpios.reduce((acc, p) => acc + p.cantidad * p.precioUnitario, 0);
 
