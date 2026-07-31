@@ -38,6 +38,7 @@ export default function TrabajoDetail() {
           filas.push(`
             <tr>
               <td>${p.nombre}</td>
+              <td>${p.color || "—"}</td>
               <td>${t.talle}</td>
               <td style="text-align:center;"><strong>${t.cantidad}</strong></td>
             </tr>`);
@@ -46,6 +47,7 @@ export default function TrabajoDetail() {
         filas.push(`
           <tr>
             <td>${p.nombre}</td>
+            <td>${p.color || "—"}</td>
             <td>—</td>
             <td style="text-align:center;"><strong>${p.cantidad}</strong></td>
           </tr>`);
@@ -71,7 +73,7 @@ export default function TrabajoDetail() {
           <div class="sub">${trabajo.productos.length} producto${trabajo.productos.length !== 1 ? "s" : ""}</div>
           <table>
             <thead>
-              <tr><th>Producto</th><th>Talle</th><th style="text-align:center;">Cantidad</th></tr>
+              <tr><th>Producto</th><th>Color</th><th>Talle</th><th style="text-align:center;">Cantidad</th></tr>
             </thead>
             <tbody>${filas.join("")}</tbody>
           </table>
@@ -157,6 +159,7 @@ export default function TrabajoDetail() {
           <thead>
             <tr>
               <th>Producto</th>
+              <th>Color</th>
               <th>Cantidad</th>
               <th>Precio unitario</th>
               <th>Subtotal</th>
@@ -167,6 +170,7 @@ export default function TrabajoDetail() {
             {trabajo.productos.map((p, i) => (
               <tr key={i}>
                 <td><strong>{p.nombre}</strong></td>
+                <td style={{ color: "var(--slate)" }}>{p.color || "—"}</td>
                 <td>{p.cantidad}</td>
                 <td>${Number(p.precioUnitario).toLocaleString("es-AR")}</td>
                 <td>${Number(p.cantidad * p.precioUnitario).toLocaleString("es-AR")}</td>

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { listTrabajos, crearTrabajo } from "../data";
 
 function nuevoProducto() {
-  return { nombre: "", cantidad: "", precioUnitario: "", talles: [{ talle: "", cantidad: "" }] };
+  return { nombre: "", color: "", cantidad: "", precioUnitario: "", talles: [{ talle: "", cantidad: "" }] };
 }
 
 export default function Trabajos() {
@@ -154,6 +154,14 @@ function NuevoTrabajoModal({ onClose, onCreated }) {
                     onChange={(e) => actualizarProducto(pIdx, "nombre", e.target.value)}
                     placeholder="Ej: Remera estampada"
                     required
+                  />
+                </div>
+                <div className="field" style={{ maxWidth: 110 }}>
+                  <label>Color</label>
+                  <input
+                    value={p.color}
+                    onChange={(e) => actualizarProducto(pIdx, "color", e.target.value)}
+                    placeholder="Ej: Blanco"
                   />
                 </div>
                 <div className="field" style={{ maxWidth: 100 }}>
