@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { listTrabajos, crearTrabajo } from "../data";
 
 function nuevoProducto() {
-  return { nombre: "", color: "", cantidad: "", precioUnitario: "", talles: [{ talle: "", cantidad: "" }] };
+  return { nombre: "", color: "", precioUnitario: "", talles: [{ talle: "", cantidad: "" }] };
 }
 
 export default function Trabajos() {
@@ -117,10 +117,10 @@ function NuevoTrabajoModal({ onClose, onCreated }) {
     );
   }
 
-  const totalEstimado = productos.reduce(
-    (acc, p) => acc + (Number(p.cantidad) || 0) * (Number(p.precioUnitario) || 0),
-    0
-  );
+  const totalEstimado = productos.reduce((acc, p) => {
+    const cantidad = p.talles.reduce((a, t) => a + (Number(t.cantidad) || 0), 0);
+    return acc + cantidad * (Number(p.precioUnitario) || 0);
+  }, 0);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -164,16 +164,6 @@ function NuevoTrabajoModal({ onClose, onCreated }) {
                     placeholder="Ej: Blanco"
                   />
                 </div>
-                <div className="field" style={{ maxWidth: 100 }}>
-                  <label>Cantidad</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={p.cantidad}
-                    onChange={(e) => actualizarProducto(pIdx, "cantidad", e.target.value)}
-                    required
-                  />
-                </div>
                 <div className="field" style={{ maxWidth: 130 }}>
                   <label>Precio unitario</label>
                   <input
@@ -213,6 +203,11 @@ function NuevoTrabajoModal({ onClose, onCreated }) {
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => agregarTalle(pIdx)}>
                   + Agregar talle
                 </button>
+                <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 6 }}>
+                  Cantidad total (suma de talles): <strong style={{ color: "var(--navy)" }}>
+                    {p.talles.reduce((acc, t) => acc + (Number(t.cantidad) || 0), 0)}
+                  </strong>
+                </div>
               </div>
 
               {productos.length > 1 && (
