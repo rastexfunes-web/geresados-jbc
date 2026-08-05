@@ -49,7 +49,7 @@ export default function Colegios() {
                 style={{ alignSelf: "flex-start", marginTop: 4 }}
                 onClick={async (e) => {
                   e.preventDefault();
-                  if (confirm(`¿Eliminar el colegio "${c.nombre}"? Esto no borra sus alumnos.`)) {
+                  if (confirm(`¿Eliminar el colegio "${c.nombre}"? Esto también borra a todos sus alumnos y sus cuotas.`)) {
                     await eliminarColegio(c.id);
                     refresh();
                   }
