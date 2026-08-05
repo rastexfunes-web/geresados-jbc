@@ -57,6 +57,10 @@ export async function actualizarColegio(colegioId, data) {
 }
 
 export async function eliminarColegio(colegioId) {
+  const alumnos = await listAlumnos(colegioId);
+  for (const a of alumnos) {
+    await eliminarAlumno(a.id);
+  }
   return deleteDoc(doc(db, "colegios", colegioId));
 }
 
