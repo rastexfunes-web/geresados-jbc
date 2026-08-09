@@ -50,8 +50,7 @@ export default function AlumnoDetail() {
     setError("");
     setBusyCuotaId(cuota.id);
     try {
-      const link = await generarCuponCuota(cuota, alumno, colegio);
-      window.open(link, "_blank");
+      await generarCuponCuota(cuota, alumno, colegio);
       refresh();
     } catch (err) {
       console.error(err);
@@ -59,6 +58,24 @@ export default function AlumnoDetail() {
     } finally {
       setBusyCuotaId(null);
     }
+  }
+
+  async function handleCopiarLink(link) {
+    try {
+      await navigator.clipboard.writeText(link);
+      setError("");
+    } catch {
+      // si el navegador bloquea el clipboard, no rompemos nada
+    }
+  }
+
+  function linkWhatsapp(cuota) {
+    const detalle = cuota.esSena ? "la seña" : `la cuota #${cuota.numero}`;
+    const monto = montoConRecargo(cuota, colegio);
+    const mensaje = `Hola ${alumno.nombre}! Te paso el link para pagar ${detalle} de ${colegio.nombre} ($${Number(monto).toLocaleString("es-AR")}): ${cuota.mpInitPoint}`;
+    const telefono = (alumno.telefono || "").replace(/\D/g, "");
+    const base = telefono ? `https://wa.me/${telefono}` : "https://wa.me/";
+    return `${base}?text=${encodeURIComponent(mensaje)}`;
   }
 
   async function handleMarcarManual(cuota) {
@@ -194,9 +211,22 @@ export default function AlumnoDetail() {
                           {c.mpInitPoint ? "Reenviar cupón" : "Generar cupón"}
                         </button>
                         {c.mpInitPoint && (
-                          <a className="btn btn-outline btn-sm" href={c.mpInitPoint} target="_blank" rel="noreferrer">
-                            Abrir link
-                          </a>
+                          <>
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => handleCopiarLink(c.mpInitPoint)}
+                            >
+                              Copiar link
+                            </button>
+                            <a
+                              className="btn btn-outline btn-sm"
+                              href={linkWhatsapp(c)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Enviar por WhatsApp
+                            </a>
+                          </>
                         )}
                         <button
                           className="btn btn-gold btn-sm"
