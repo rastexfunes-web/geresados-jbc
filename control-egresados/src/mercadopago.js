@@ -5,7 +5,7 @@ import { montoConRecargo } from "./data";
 // Pide a la función de Vercel que genere el cupón de pago (preference) de
 // Mercado Pago para una cuota puntual, y guarda el link generado en Firestore.
 export async function generarCuponCuota(cuota, alumno, colegio) {
-  const detalle = cuota.esSena ? "Seña" : `Cuota ${cuota.numero}/${colegio.cantidadCuotas}`;
+  const detalle = cuota.esSena ? "Seña" : `Cuota ${cuota.numero} / ${colegio.cantidadCuotas}`;
   const monto = montoConRecargo(cuota, colegio);
   const resp = await fetch("/api/crear-preference", {
     method: "POST",
