@@ -377,6 +377,8 @@ function NuevoAlumnoModal({ colegio, onClose, onCreated }) {
   const [prendaAbrigo, setPrendaAbrigo] = useState("");
   const [talleSuperior, setTalleSuperior] = useState("");
   const [talleAbrigo, setTalleAbrigo] = useState("");
+  const [montoCuotaPersonalizado, setMontoCuotaPersonalizado] = useState("");
+  const [montoSenaPersonalizado, setMontoSenaPersonalizado] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
@@ -395,6 +397,8 @@ function NuevoAlumnoModal({ colegio, onClose, onCreated }) {
           prendaAbrigo,
           talleSuperior,
           talleAbrigo,
+          montoCuotaPersonalizado,
+          montoSenaPersonalizado,
         },
         colegio
       );
@@ -471,9 +475,38 @@ function NuevoAlumnoModal({ colegio, onClose, onCreated }) {
               <input value={telefono} onChange={(e) => setTelefono(e.target.value)} />
             </div>
           </div>
+
+          <div className="form-row">
+            <div className="field">
+              <label>Monto de cuota personalizado (opcional)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={montoCuotaPersonalizado}
+                onChange={(e) => setMontoCuotaPersonalizado(e.target.value)}
+                placeholder={`Estándar: $${Number(colegio.montoCuota).toLocaleString("es-AR")}`}
+              />
+            </div>
+            <div className="field">
+              <label>Seña personalizada (opcional)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={montoSenaPersonalizado}
+                onChange={(e) => setMontoSenaPersonalizado(e.target.value)}
+                placeholder={`Estándar: $${Number(colegio.montoSena || 0).toLocaleString("es-AR")}`}
+              />
+            </div>
+          </div>
+          <p style={{ fontSize: 12, color: "var(--slate)" }}>
+            Usalo si este alumno lleva un plan reducido (ej: solo remera, sin buzo/campera) y hay que cobrarle un monto distinto al del resto del colegio.
+          </p>
+
           <p style={{ fontSize: 13, color: "var(--slate)" }}>
             Se van a generar automáticamente {colegio.cantidadCuotas} cuotas de $
-            {Number(colegio.montoCuota).toLocaleString("es-AR")} para este alumno.
+            {Number(montoCuotaPersonalizado || colegio.montoCuota).toLocaleString("es-AR")} para este alumno.
           </p>
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
