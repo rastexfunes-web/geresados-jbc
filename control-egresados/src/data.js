@@ -82,7 +82,27 @@ export async function getAlumno(alumnoId) {
 }
 
 // Crea el alumno y genera automáticamente sus cuotas según el plan del colegio
-export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, telefono, prendaSuperior, prendaAbrigo, talleSuperior, talleAbrigo }, colegio) {
+// Crea el alumno y genera automáticamente sus cuotas según el plan del colegio.
+// Si el alumno tiene un plan reducido (ej: solo remera, sin buzo/campera),
+// se le puede pasar montoCuotaPersonalizado y/o montoSenaPersonalizado para
+// cobrarle un monto distinto al estándar del colegio.
+export async function crearAlumno(
+  {
+    colegioId,
+    nombre,
+    apellido,
+    apodo,
+    dni,
+    telefono,
+    prendaSuperior,
+    prendaAbrigo,
+    talleSuperior,
+    talleAbrigo,
+    montoCuotaPersonalizado,
+    montoSenaPersonalizado,
+  },
+  colegio
+) {
   const alumnoRef = await addDoc(collection(db, "alumnos"), {
     colegioId,
     nombre,
@@ -97,18 +117,27 @@ export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, tel
     createdAt: serverTimestamp(),
   });
 
+  const montoCuota =
+    montoCuotaPersonalizado !== undefined && montoCuotaPersonalizado !== ""
+      ? Number(montoCuotaPersonalizado)
+      : colegio.montoCuota;
+  const montoSena =
+    montoSenaPersonalizado !== undefined && montoSenaPersonalizado !== ""
+      ? Number(montoSenaPersonalizado)
+      : colegio.montoSena || 0;
+
   const batch = writeBatch(db);
 
   // La seña se guarda como un ítem especial (numero 0) para que aparezca
   // primero y se pueda cobrar y marcar igual que una cuota.
-  if (colegio.montoSena > 0) {
+  if (montoSena > 0) {
     const senaRef = doc(collection(db, "cuotas"));
     batch.set(senaRef, {
       alumnoId: alumnoRef.id,
       colegioId,
       numero: 0,
       esSena: true,
-      monto: colegio.montoSena,
+      monto: montoSena,
       estado: "pendiente",
       metodoPago: null,
       mpPreferenceId: null,
@@ -125,7 +154,7 @@ export async function crearAlumno({ colegioId, nombre, apellido, apodo, dni, tel
       colegioId,
       numero: i,
       esSena: false,
-      monto: colegio.montoCuota,
+      monto: montoCuota,
       fechaVencimiento: calcularVencimiento(colegio, i),
       estado: "pendiente", // pendiente | pagada
       metodoPago: null, // "mercadopago" | "manual"
@@ -245,6 +274,27 @@ export async function listTodosLosAlumnos() {
 export async function listTodasLasCuotas() {
   const snap = await getDocs(collection(db, "cuotas"));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// Agrega un cobro extra (ej: remera de más, un agregado con emoji, etc.)
+// que se suma como un ítem más a pagar, aparte del plan de cuotas.
+export async function agregarExtraAlumno({ alumnoId, colegioId, descripcion, monto, numero }) {
+  return addDoc(collection(db, "cuotas"), {
+    alumnoId,
+    colegioId,
+    numero,
+    esSena: false,
+    esExtra: true,
+    descripcion: descripcion || "Extra",
+    monto: Number(monto) || 0,
+    fechaVencimiento: "",
+    estado: "pendiente",
+    metodoPago: null,
+    mpPreferenceId: null,
+    mpInitPoint: null,
+    fechaPago: null,
+    createdAt: serverTimestamp(),
+  });
 }
 
 export async function actualizarAlumno(alumnoId, data) {
