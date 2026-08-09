@@ -218,7 +218,7 @@ export default function AlumnoDetail() {
                             >
                               Copiar link
                             </button>
-                            <a
+                            
                               className="btn btn-outline btn-sm"
                               href={linkWhatsapp(c)}
                               target="_blank"
