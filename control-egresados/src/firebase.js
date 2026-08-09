@@ -1,8 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getFunctions } from "firebase/functions";
 
+// Reemplazar con los datos de tu proyecto de Firebase
+// (Project Settings > General > Tus apps > SDK setup and configuration)
 const firebaseConfig = {
   apiKey: "AIzaSyCYYPwWzi6T8wUK_e7T5PqgtriSPIgsHuw",
   authDomain: "egresados-jbc.firebaseapp.com",
@@ -17,4 +18,3 @@ const app = initializeApp(firebaseConfig);
 
 export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const functions = getFunctions(app, "southamerica-east1");
