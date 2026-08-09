@@ -7,7 +7,6 @@ import { montoConRecargo } from "./data";
 export async function generarCuponCuota(cuota, alumno, colegio) {
   const detalle = cuota.esSena ? "Seña" : `Cuota ${cuota.numero}/${colegio.cantidadCuotas}`;
   const monto = montoConRecargo(cuota, colegio);
-
   const resp = await fetch("/api/crear-preference", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -15,7 +14,7 @@ export async function generarCuponCuota(cuota, alumno, colegio) {
       cuotaId: cuota.id,
       alumnoId: alumno.id,
       colegioId: colegio.id,
-      titulo: `${colegio.nombre} - ${alumno.apellido} ${alumno.nombre} - ${detalle}`,
+      titulo: `JBC Egresados - ${colegio.nombre} - ${alumno.apellido} ${alumno.nombre} - ${detalle}`,
       monto,
     }),
   });
