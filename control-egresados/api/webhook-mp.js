@@ -12,10 +12,20 @@ function getDb() {
 
 export default async function handler(req, res) {
   try {
-    const paymentId = req.query["data.id"] || req.body?.data?.id;
-    const type = req.query.type || req.body?.type;
+    // Mercado Pago manda notificaciones en dos formatos posibles:
+    // 1) Nuevo: ?type=payment&data.id=123
+    // 2) IPN clásico: ?topic=payment&id=123
+    let paymentId = null;
 
-    if (type !== "payment" || !paymentId) {
+    if (req.query.type === "payment" || req.body?.type === "payment") {
+      paymentId = req.query["data.id"] || req.body?.data?.id;
+    } else if (req.query.topic === "payment" || req.body?.topic === "payment") {
+      paymentId = req.query.id || req.body?.id;
+    }
+
+    if (!paymentId) {
+      // Ignoramos notificaciones que no son de un pago puntual
+      // (ej. merchant_order, u otros tipos de evento).
       res.status(200).send("ignorado");
       return;
     }
