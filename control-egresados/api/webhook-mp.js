@@ -3,8 +3,25 @@ import admin from "firebase-admin";
 
 function getDb() {
   if (!admin.apps.length) {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!raw) {
+      throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY no está definida");
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      throw new Error(
+        `FIREBASE_SERVICE_ACCOUNT_KEY no es un JSON válido (largo actual: ${raw.length} caracteres). Detalle: ${err.message}`
+      );
+    }
+    if (!parsed.private_key || !parsed.client_email || !parsed.project_id) {
+      throw new Error(
+        "FIREBASE_SERVICE_ACCOUNT_KEY es JSON válido pero le faltan campos (private_key, client_email o project_id). Puede que el archivo se haya pegado incompleto."
+      );
+    }
     admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
+      credential: admin.credential.cert(parsed),
     });
   }
   return admin.firestore();
