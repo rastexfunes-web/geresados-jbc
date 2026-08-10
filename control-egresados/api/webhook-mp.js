@@ -1,8 +1,9 @@
 import { MercadoPagoConfig, Payment } from "mercadopago";
-import admin from "firebase-admin";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 function getDb() {
-  if (!admin.apps.length) {
+  if (getApps().length === 0) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
     if (!raw) {
       throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY no está definida");
@@ -20,11 +21,11 @@ function getDb() {
         "FIREBASE_SERVICE_ACCOUNT_KEY es JSON válido pero le faltan campos (private_key, client_email o project_id). Puede que el archivo se haya pegado incompleto."
       );
     }
-    admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    initializeApp({
+      credential: cert(parsed),
     });
   }
-  return admin.firestore();
+  return getFirestore();
 }
 
 export default async function handler(req, res) {
@@ -68,7 +69,7 @@ export default async function handler(req, res) {
       await db.collection("cuotas").doc(cuotaId).update({
         estado: "pagada",
         metodoPago: "mercadopago",
-        fechaPago: admin.firestore.FieldValue.serverTimestamp(),
+        fechaPago: FieldValue.serverTimestamp(),
       });
     }
 
