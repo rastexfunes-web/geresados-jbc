@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     const preference = new Preference(client);
 
     const appUrl = `https://${req.headers.host}`;
-    const backUrl = `${appUrl}/colegios/${colegioId}/alumnos/${alumnoId}`;
+    const backUrl = `${appUrl}/pago-realizado`;
 
     const result = await preference.create({
       body: {
