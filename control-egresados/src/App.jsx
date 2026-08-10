@@ -3,6 +3,7 @@ import { AuthProvider } from "./AuthContext";
 import PrivateRoute from "./PrivateRoute";
 import Layout from "./Layout";
 import Login from "./pages/Login";
+import PagoRealizado from "./pages/PagoRealizado";
 import Colegios from "./pages/Colegios";
 import ColegioDetail from "./pages/ColegioDetail";
 import AlumnoDetail from "./pages/AlumnoDetail";
@@ -16,6 +17,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/pago-realizado" element={<PagoRealizado />} />
           <Route
             path="/"
             element={
