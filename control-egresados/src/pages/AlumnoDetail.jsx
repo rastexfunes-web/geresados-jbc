@@ -10,6 +10,8 @@ import {
   esCuotaVencida,
   montoConRecargo,
   formatFechaAR,
+  agregarExtraAlumno,
+  actualizarAlumno,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
 
@@ -21,6 +23,8 @@ export default function AlumnoDetail() {
   const [cuotas, setCuotas] = useState(null);
   const [busyCuotaId, setBusyCuotaId] = useState(null);
   const [error, setError] = useState("");
+  const [showExtraModal, setShowExtraModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   async function refresh() {
     const [a, c, cu] = await Promise.all([
@@ -70,9 +74,17 @@ export default function AlumnoDetail() {
   }
 
   function linkWhatsapp(cuota) {
-    const detalle = cuota.esSena ? "la seña" : `la cuota #${cuota.numero}`;
+    const detalle = cuota.esExtra ? cuota.descripcion : cuota.esSena ? "la seña" : `la cuota #${cuota.numero}`;
     const monto = montoConRecargo(cuota, colegio);
     const mensaje = `Hola ${alumno.nombre}! Te paso el link para pagar ${detalle} de ${colegio.nombre} ($${Number(monto).toLocaleString("es-AR")}): ${cuota.mpInitPoint}`;
+    const telefono = (alumno.telefono || "").replace(/\D/g, "");
+    const base = telefono ? `https://wa.me/${telefono}` : "https://wa.me/";
+    return `${base}?text=${encodeURIComponent(mensaje)}`;
+  }
+
+  function linkWhatsappPedidoExtra() {
+    const url = `https://geresados-jbc.vercel.app/colegios/${colegio.id}/alumnos/${alumno.id}/extra`;
+    const mensaje = `Hola ${alumno.nombre}! Si querés agregar algo extra a tu pedido de ${colegio.nombre} (por ejemplo otra remera), entrá acá y lo cargás vos mismo: ${url}`;
     const telefono = (alumno.telefono || "").replace(/\D/g, "");
     const base = telefono ? `https://wa.me/${telefono}` : "https://wa.me/";
     return `${base}?text=${encodeURIComponent(mensaje)}`;
@@ -125,6 +137,22 @@ export default function AlumnoDetail() {
             </div>
           )}
         </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn btn-outline" onClick={() => setShowEditModal(true)}>
+            Editar alumno
+          </button>
+          <a
+            className="btn btn-outline"
+            href={linkWhatsappPedidoExtra()}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Enviar link para pedir extra
+          </a>
+          <button className="btn btn-outline" onClick={() => setShowExtraModal(true)}>
+            + Agregar extra
+          </button>
+        </div>
       </div>
 
       <div className="ribbon" style={{ marginBottom: 24 }}>
@@ -132,9 +160,9 @@ export default function AlumnoDetail() {
           <div
             key={c.id}
             className={`ribbon-seg ${c.estado === "pagada" ? "pagada" : ""}`}
-            title={c.esSena ? "Seña" : `Cuota ${c.numero}`}
+            title={c.esExtra ? c.descripcion : c.esSena ? "Seña" : `Cuota ${c.numero}`}
           >
-            {c.esSena ? "S" : c.numero}
+            {c.esExtra ? "+" : c.esSena ? "S" : c.numero}
           </div>
         ))}
       </div>
@@ -180,7 +208,7 @@ export default function AlumnoDetail() {
               const monto = montoConRecargo(c, colegio);
               return (
                 <tr key={c.id}>
-                  <td>{c.esSena ? "Seña" : `#${c.numero}`}</td>
+                  <td>{c.esExtra ? c.descripcion : c.esSena ? "Seña" : `#${c.numero}`}</td>
                   <td style={{ fontSize: 13, color: "var(--slate)" }}>
                     {c.fechaVencimiento ? formatFechaAR(c.fechaVencimiento) : "—"}
                   </td>
@@ -252,6 +280,228 @@ export default function AlumnoDetail() {
             })}
           </tbody>
         </table>
+      </div>
+
+      {showExtraModal && (
+        <ExtraModal
+          alumno={alumno}
+          colegio={colegio}
+          cuotas={cuotas}
+          onClose={() => setShowExtraModal(false)}
+          onCreated={() => {
+            setShowExtraModal(false);
+            refresh();
+          }}
+        />
+      )}
+
+      {showEditModal && (
+        <EditarAlumnoModal
+          alumno={alumno}
+          onClose={() => setShowEditModal(false)}
+          onSaved={() => {
+            setShowEditModal(false);
+            refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+const PRENDAS_SUPERIOR = ["Remera", "Chomba"];
+const PRENDAS_ABRIGO = ["Campera", "Buzo"];
+
+function EditarAlumnoModal({ alumno, onClose, onSaved }) {
+  const [nombre, setNombre] = useState(alumno.nombre || "");
+  const [apellido, setApellido] = useState(alumno.apellido || "");
+  const [apodo, setApodo] = useState(alumno.apodo || "");
+  const [dni, setDni] = useState(alumno.dni || "");
+  const [telefono, setTelefono] = useState(alumno.telefono || "");
+  const [prendaSuperior, setPrendaSuperior] = useState(alumno.prendaSuperior || "");
+  const [prendaAbrigo, setPrendaAbrigo] = useState(alumno.prendaAbrigo || "");
+  const [talleSuperior, setTalleSuperior] = useState(alumno.talleSuperior || "");
+  const [talleAbrigo, setTalleAbrigo] = useState(alumno.talleAbrigo || "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await actualizarAlumno(alumno.id, {
+        nombre,
+        apellido,
+        apodo,
+        dni,
+        telefono,
+        prendaSuperior,
+        prendaAbrigo,
+        talleSuperior,
+        talleAbrigo,
+      });
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h2>Editar alumno</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-row">
+            <div className="field">
+              <label>Nombre</label>
+              <input value={nombre} onChange={(e) => setNombre(e.target.value)} required autoFocus />
+            </div>
+            <div className="field">
+              <label>Apellido</label>
+              <input value={apellido} onChange={(e) => setApellido(e.target.value)} required />
+            </div>
+          </div>
+          <div className="field">
+            <label>Apodo (opcional)</label>
+            <input value={apodo} onChange={(e) => setApodo(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Remera o chomba</label>
+            <div className="chip-group">
+              {PRENDAS_SUPERIOR.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`chip ${prendaSuperior === p ? "selected" : ""}`}
+                  onClick={() => setPrendaSuperior(prendaSuperior === p ? "" : p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label>Talle remera/chomba (opcional)</label>
+            <input value={talleSuperior} onChange={(e) => setTalleSuperior(e.target.value)} placeholder="S, M, L, 12, 14…" />
+          </div>
+          <div className="field">
+            <label>Campera o buzo</label>
+            <div className="chip-group">
+              {PRENDAS_ABRIGO.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`chip ${prendaAbrigo === p ? "selected" : ""}`}
+                  onClick={() => setPrendaAbrigo(prendaAbrigo === p ? "" : p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label>Talle buzo/campera (opcional)</label>
+            <input value={talleAbrigo} onChange={(e) => setTalleAbrigo(e.target.value)} placeholder="S, M, L, 12, 14…" />
+          </div>
+          <div className="form-row">
+            <div className="field">
+              <label>DNI (opcional)</label>
+              <input value={dni} onChange={(e) => setDni(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Teléfono (opcional)</label>
+              <input value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+            </div>
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? "Guardando…" : "Guardar cambios"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
+  const [descripcion, setDescripcion] = useState("");
+  const [cantidad, setCantidad] = useState(1);
+  const [precioUnitario, setPrecioUnitario] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const total = (Number(cantidad) || 0) * (Number(precioUnitario) || 0);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const siguienteNumero = Math.max(0, ...cuotas.map((c) => c.numero || 0)) + 1;
+      const detalle = Number(cantidad) > 1 ? `${descripcion} (x${cantidad})` : descripcion;
+      await agregarExtraAlumno({
+        alumnoId: alumno.id,
+        colegioId: colegio.id,
+        descripcion: detalle,
+        monto: total,
+        numero: siguienteNumero,
+      });
+      onCreated();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h2>Agregar extra — {alumno.apellido}, {alumno.nombre}</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label>Descripción</label>
+            <input
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="Ej: Remera extra, agregado con emoji…"
+              required
+              autoFocus
+            />
+          </div>
+          <div className="form-row">
+            <div className="field" style={{ maxWidth: 110 }}>
+              <label>Cantidad</label>
+              <input
+                type="number"
+                min="1"
+                value={cantidad}
+                onChange={(e) => setCantidad(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label>Precio unitario ($)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={precioUnitario}
+                onChange={(e) => setPrecioUnitario(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: "var(--slate)" }}>
+            Total: <strong>${total.toLocaleString("es-AR")}</strong>
+          </p>
+          <p style={{ fontSize: 13, color: "var(--slate)" }}>
+            Se suma como un ítem más a pagar, con su propio cupón de Mercado Pago o marcado manual.
+          </p>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? "Agregando…" : "Agregar extra"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
