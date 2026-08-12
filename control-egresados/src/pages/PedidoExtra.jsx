@@ -33,15 +33,17 @@ export default function PedidoExtra() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ colegioId, alumnoId, descripcion: detalle, monto: total }),
       });
-      if (!resp.ok) throw new Error();
       const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || "No se pudo enviar el pedido.");
+      }
       if (data.initPoint) {
         window.location.href = data.initPoint;
       } else {
         setEnviado(true);
       }
-    } catch {
-      setError("No se pudo enviar el pedido. Probá de nuevo en un rato.");
+    } catch (err) {
+      setError(err.message || "No se pudo enviar el pedido. Probá de nuevo en un rato.");
     } finally {
       setEnviando(false);
     }
@@ -107,14 +109,14 @@ export default function PedidoExtra() {
               disabled={enviando}
               style={{ width: "100%", justifyContent: "center" }}
             >
-              {enviando ? "Enviando…" : "Agregar y pagar"}
+              {enviando ? "Enviando…" : "Agregar a mis cuotas"}
             </button>
           </form>
         )}
 
         {enviado && (
           <p style={{ color: "var(--slate)", fontSize: 14 }}>
-            ¡Listo! Se agregó tu pedido.
+            ¡Listo! Se sumó a tus próximas cuotas.
           </p>
         )}
       </div>

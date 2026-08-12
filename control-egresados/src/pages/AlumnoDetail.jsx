@@ -11,6 +11,7 @@ import {
   montoConRecargo,
   formatFechaAR,
   agregarExtraAlumno,
+  repartirExtraEnCuotas,
   actualizarAlumno,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
@@ -187,6 +188,17 @@ export default function AlumnoDetail() {
           <div className="value">{resumen.cuotasPagas} / {resumen.cuotasTotales}</div>
         </div>
       </div>
+
+      {alumno.extras?.length > 0 && (
+        <div className="card" style={{ padding: "14px 20px", marginBottom: 24, fontSize: 13, color: "var(--slate)" }}>
+          <strong style={{ color: "var(--navy)", display: "block", marginBottom: 6 }}>Extras aplicados</strong>
+          {alumno.extras.map((ex, i) => (
+            <div key={i}>
+              {ex.descripcion} — ${Number(ex.monto).toLocaleString("es-AR")} (repartido en {ex.repartidoEnCuotas} cuota{ex.repartidoEnCuotas !== 1 ? "s" : ""})
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
 
@@ -429,23 +441,39 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
   const [cantidad, setCantidad] = useState(1);
   const [precioUnitario, setPrecioUnitario] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const total = (Number(cantidad) || 0) * (Number(precioUnitario) || 0);
+  const cuotasPendientes = cuotas.filter((c) => !c.esSena && !c.esExtra && c.estado !== "pagada");
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError("");
     setSaving(true);
     try {
-      const siguienteNumero = Math.max(0, ...cuotas.map((c) => c.numero || 0)) + 1;
       const detalle = Number(cantidad) > 1 ? `${descripcion} (x${cantidad})` : descripcion;
-      await agregarExtraAlumno({
-        alumnoId: alumno.id,
-        colegioId: colegio.id,
-        descripcion: detalle,
-        monto: total,
-        numero: siguienteNumero,
-      });
+      if (cuotasPendientes.length > 0) {
+        await repartirExtraEnCuotas({
+          alumnoId: alumno.id,
+          descripcion: detalle,
+          montoTotal: total,
+          cuotasPendientes,
+        });
+      } else {
+        // No hay cuotas pendientes para repartir (ej: alumno ya pagó todo),
+        // así que el extra queda como un cobro aparte con su propio cupón.
+        const siguienteNumero = Math.max(0, ...cuotas.map((c) => c.numero || 0)) + 1;
+        await agregarExtraAlumno({
+          alumnoId: alumno.id,
+          colegioId: colegio.id,
+          descripcion: detalle,
+          monto: total,
+          numero: siguienteNumero,
+        });
+      }
       onCreated();
+    } catch (err) {
+      setError(err.message || "No se pudo agregar el extra.");
     } finally {
       setSaving(false);
     }
@@ -493,8 +521,11 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
             Total: <strong>${total.toLocaleString("es-AR")}</strong>
           </p>
           <p style={{ fontSize: 13, color: "var(--slate)" }}>
-            Se suma como un ítem más a pagar, con su propio cupón de Mercado Pago o marcado manual.
+            {cuotasPendientes.length > 0
+              ? `Se reparte en partes iguales entre las ${cuotasPendientes.length} cuota${cuotasPendientes.length !== 1 ? "s" : ""} pendientes del alumno (se suma al monto de cada una).`
+              : "Este alumno ya tiene todas sus cuotas pagas, así que este extra va a quedar como un cobro aparte, con su propio cupón de pago."}
           </p>
+          {error && <div className="error-text">{error}</div>}
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
