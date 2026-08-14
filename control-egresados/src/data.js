@@ -358,19 +358,43 @@ export async function editarTalleCuotaExtra(cuotaId, nuevoTalle) {
 // Elimina un extra que se había repartido entre cuotas: le resta el monto
 // que le había sumado a cada cuota afectada (solo si esa cuota todavía no
 // está pagada, para no descuadrar plata ya cobrada) y lo saca del historial.
-export async function eliminarExtraRepartido(alumnoId, extrasActuales, indice) {
+// "cuotasAlumno" son las cuotas actuales del alumno (ya cargadas en pantalla),
+// usadas como respaldo para extras viejos que no guardaron el detalle de
+// qué cuotas afectaron.
+export async function eliminarExtraRepartido(alumnoId, extrasActuales, indice, cuotasAlumno) {
   const extra = extrasActuales[indice];
-  const cuotasAfectadas = extra.cuotasAfectadas || [];
-
   const batch = writeBatch(db);
-  for (const ca of cuotasAfectadas) {
-    const snap = await getDoc(doc(db, "cuotas", ca.id));
-    if (snap.exists() && snap.data().estado !== "pagada") {
-      const montoActual = snap.data().monto;
-      batch.update(doc(db, "cuotas", ca.id), {
-        monto: Math.max(0, Math.round((montoActual - ca.montoAgregado) * 100) / 100),
-        mpPreferenceId: null,
-        mpInitPoint: null,
+
+  if (extra.cuotasAfectadas?.length) {
+    for (const ca of extra.cuotasAfectadas) {
+      const snap = await getDoc(doc(db, "cuotas", ca.id));
+      if (snap.exists() && snap.data().estado !== "pagada") {
+        const montoActual = snap.data().monto;
+        batch.update(doc(db, "cuotas", ca.id), {
+          monto: Math.max(0, Math.round((montoActual - ca.montoAgregado) * 100) / 100),
+          mpPreferenceId: null,
+          mpInitPoint: null,
+        });
+      }
+    }
+  } else {
+    // Extra viejo (cargado antes de que guardáramos qué cuotas afectó):
+    // aproximamos repartiendo la resta en partes iguales entre las cuotas
+    // que hoy están pendientes, igual que se hizo al repartirlo.
+    const pendientes = (cuotasAlumno || []).filter(
+      (c) => !c.esSena && !c.esExtra && c.estado !== "pagada"
+    );
+    if (pendientes.length > 0) {
+      const cantidad = pendientes.length;
+      const base = Math.floor((extra.monto / cantidad) * 100) / 100;
+      pendientes.forEach((c, i) => {
+        const esUltima = i === cantidad - 1;
+        const montoARestar = Math.round((esUltima ? extra.monto - base * (cantidad - 1) : base) * 100) / 100;
+        batch.update(doc(db, "cuotas", c.id), {
+          monto: Math.max(0, Math.round((c.monto - montoARestar) * 100) / 100),
+          mpPreferenceId: null,
+          mpInitPoint: null,
+        });
       });
     }
   }

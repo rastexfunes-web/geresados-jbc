@@ -131,7 +131,7 @@ export default function AlumnoDetail() {
 
   async function handleEliminarExtraRepartido(indice, ex) {
     if (!confirm(`¿Eliminar el extra "${ex.descripcion}"? Se le resta el monto a las cuotas que todavía estén pendientes.`)) return;
-    await eliminarExtraRepartido(alumno.id, alumno.extras, indice);
+    await eliminarExtraRepartido(alumno.id, alumno.extras, indice, cuotas);
     refresh();
   }
 
