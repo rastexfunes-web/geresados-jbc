@@ -194,7 +194,7 @@ export default function AlumnoDetail() {
           <strong style={{ color: "var(--navy)", display: "block", marginBottom: 6 }}>Extras aplicados</strong>
           {alumno.extras.map((ex, i) => (
             <div key={i}>
-              {ex.descripcion} — ${Number(ex.monto).toLocaleString("es-AR")} (repartido en {ex.repartidoEnCuotas} cuota{ex.repartidoEnCuotas !== 1 ? "s" : ""})
+              {ex.descripcion}{ex.talle ? ` (talle ${ex.talle})` : ""} — ${Number(ex.monto).toLocaleString("es-AR")} (repartido en {ex.repartidoEnCuotas} cuota{ex.repartidoEnCuotas !== 1 ? "s" : ""})
             </div>
           ))}
         </div>
@@ -220,7 +220,7 @@ export default function AlumnoDetail() {
               const monto = montoConRecargo(c, colegio);
               return (
                 <tr key={c.id}>
-                  <td>{c.esExtra ? c.descripcion : c.esSena ? "Seña" : `#${c.numero}`}</td>
+                  <td>{c.esExtra ? `${c.descripcion}${c.talle ? ` (talle ${c.talle})` : ""}` : c.esSena ? "Seña" : `#${c.numero}`}</td>
                   <td style={{ fontSize: 13, color: "var(--slate)" }}>
                     {c.fechaVencimiento ? formatFechaAR(c.fechaVencimiento) : "—"}
                   </td>
@@ -438,6 +438,7 @@ function EditarAlumnoModal({ alumno, onClose, onSaved }) {
 
 function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
   const [descripcion, setDescripcion] = useState("");
+  const [talle, setTalle] = useState("");
   const [cantidad, setCantidad] = useState(1);
   const [precioUnitario, setPrecioUnitario] = useState("");
   const [saving, setSaving] = useState(false);
@@ -458,6 +459,7 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
           descripcion: detalle,
           montoTotal: total,
           cuotasPendientes,
+          talle,
         });
       } else {
         // No hay cuotas pendientes para repartir (ej: alumno ya pagó todo),
@@ -469,6 +471,7 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
           descripcion: detalle,
           monto: total,
           numero: siguienteNumero,
+          talle,
         });
       }
       onCreated();
@@ -492,6 +495,14 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
               placeholder="Ej: Remera extra, agregado con emoji…"
               required
               autoFocus
+            />
+          </div>
+          <div className="field">
+            <label>Talle (opcional)</label>
+            <input
+              value={talle}
+              onChange={(e) => setTalle(e.target.value)}
+              placeholder="S, M, L, 12, 14…"
             />
           </div>
           <div className="form-row">

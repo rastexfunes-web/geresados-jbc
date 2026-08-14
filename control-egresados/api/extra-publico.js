@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     // ellas. Si ya las pagó todas, no hay dónde repartirlo, así que se crea
     // como un cobro aparte con su propio cupón de pago (y se manda a pagar).
     if (req.method === "POST") {
-      const { colegioId, alumnoId, descripcion, monto } = req.body;
+      const { colegioId, alumnoId, descripcion, monto, talle } = req.body;
       if (!colegioId || !alumnoId || !descripcion || !monto) {
         res.status(400).json({ error: "Faltan datos" });
         return;
@@ -99,6 +99,7 @@ export default async function handler(req, res) {
         batch.update(db.collection("alumnos").doc(alumnoId), {
           extras: FieldValue.arrayUnion({
             descripcion,
+            talle: talle || "",
             monto: montoTotal,
             repartidoEnCuotas: cantidad,
             fecha: new Date().toISOString(),
@@ -120,6 +121,7 @@ export default async function handler(req, res) {
         esSena: false,
         esExtra: true,
         descripcion,
+        talle: talle || "",
         monto: montoTotal,
         fechaVencimiento: "",
         estado: "pendiente",

@@ -5,6 +5,7 @@ export default function PedidoExtra() {
   const { colegioId, alumnoId } = useParams();
   const [info, setInfo] = useState(null);
   const [descripcion, setDescripcion] = useState("");
+  const [talle, setTalle] = useState("");
   const [cantidad, setCantidad] = useState(1);
   const [precioUnitario, setPrecioUnitario] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -31,7 +32,7 @@ export default function PedidoExtra() {
       const resp = await fetch("/api/extra-publico", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ colegioId, alumnoId, descripcion: detalle, monto: total }),
+        body: JSON.stringify({ colegioId, alumnoId, descripcion: detalle, monto: total, talle }),
       });
       const data = await resp.json();
       if (!resp.ok) {
@@ -75,6 +76,14 @@ export default function PedidoExtra() {
                 placeholder="Ej: Remera extra, agregado con emoji…"
                 required
                 autoFocus
+              />
+            </div>
+            <div className="field">
+              <label>Talle (opcional)</label>
+              <input
+                value={talle}
+                onChange={(e) => setTalle(e.target.value)}
+                placeholder="S, M, L, 12, 14…"
               />
             </div>
             <div className="form-row">

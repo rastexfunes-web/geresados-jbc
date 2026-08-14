@@ -279,7 +279,7 @@ export async function listTodasLasCuotas() {
 
 // Agrega un cobro extra (ej: remera de más, un agregado con emoji, etc.)
 // que se suma como un ítem más a pagar, aparte del plan de cuotas.
-export async function agregarExtraAlumno({ alumnoId, colegioId, descripcion, monto, numero }) {
+export async function agregarExtraAlumno({ alumnoId, colegioId, descripcion, monto, numero, talle }) {
   return addDoc(collection(db, "cuotas"), {
     alumnoId,
     colegioId,
@@ -287,6 +287,7 @@ export async function agregarExtraAlumno({ alumnoId, colegioId, descripcion, mon
     esSena: false,
     esExtra: true,
     descripcion: descripcion || "Extra",
+    talle: talle || "",
     monto: Number(monto) || 0,
     fechaVencimiento: "",
     estado: "pendiente",
@@ -303,7 +304,7 @@ export async function agregarExtraAlumno({ alumnoId, colegioId, descripcion, mon
 // iguales, en vez de crear un cobro aparte. Las cuotas afectadas pierden su
 // cupón de Mercado Pago ya generado (si tenían), porque el monto cambió y
 // hay que generar uno nuevo.
-export async function repartirExtraEnCuotas({ alumnoId, descripcion, montoTotal, cuotasPendientes }) {
+export async function repartirExtraEnCuotas({ alumnoId, descripcion, montoTotal, cuotasPendientes, talle }) {
   if (!cuotasPendientes.length) {
     throw new Error("No hay cuotas pendientes para repartir el extra.");
   }
@@ -325,6 +326,7 @@ export async function repartirExtraEnCuotas({ alumnoId, descripcion, montoTotal,
   batch.update(doc(db, "alumnos", alumnoId), {
     extras: arrayUnion({
       descripcion,
+      talle: talle || "",
       monto: montoTotal,
       repartidoEnCuotas: cantidad,
       fecha: new Date().toISOString(),

@@ -51,8 +51,8 @@ export default function ColegioDetail() {
 
   function handleImprimirTalles() {
     const filas = alumnos
-      .map(
-        (a) => `
+      .map((a) => {
+        const filaPrincipal = `
         <tr>
           <td>${a.apellido}, ${a.nombre}</td>
           <td>${a.apodo || "—"}</td>
@@ -60,8 +60,19 @@ export default function ColegioDetail() {
           <td>${a.talleSuperior || "—"}</td>
           <td>${a.prendaAbrigo || "—"}</td>
           <td>${a.talleAbrigo || "—"}</td>
+        </tr>`;
+        const filasExtras = (a.extras || [])
+          .map(
+            (ex) => `
+        <tr>
+          <td>${a.apellido}, ${a.nombre}</td>
+          <td colspan="3">Extra: ${ex.descripcion}</td>
+          <td colspan="2">${ex.talle || "—"}</td>
         </tr>`
-      )
+          )
+          .join("");
+        return filaPrincipal + filasExtras;
+      })
       .join("");
 
     // Conteo para producción: cuántas prendas de cada tipo y talle hay que hacer.
@@ -77,6 +88,12 @@ export default function ColegioDetail() {
         conteo[a.prendaAbrigo] = conteo[a.prendaAbrigo] || {};
         conteo[a.prendaAbrigo][talle] = (conteo[a.prendaAbrigo][talle] || 0) + 1;
       }
+      (a.extras || []).forEach((ex) => {
+        if (!ex.talle) return;
+        const clave = `Extra: ${ex.descripcion}`;
+        conteo[clave] = conteo[clave] || {};
+        conteo[clave][ex.talle] = (conteo[clave][ex.talle] || 0) + 1;
+      });
     });
 
     const filasResumen = Object.entries(conteo)
