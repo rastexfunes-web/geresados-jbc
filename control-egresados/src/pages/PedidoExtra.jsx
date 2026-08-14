@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
+const TIPOS_EXTRA = ["Remera", "Chomba", "Buzo", "Campera", "Emoji"];
+
 export default function PedidoExtra() {
   const { colegioId, alumnoId } = useParams();
   const [info, setInfo] = useState(null);
-  const [descripcion, setDescripcion] = useState("");
+  const [tipoExtra, setTipoExtra] = useState("");
   const [talle, setTalle] = useState("");
   const [cantidad, setCantidad] = useState(1);
   const [precioUnitario, setPrecioUnitario] = useState("");
@@ -12,6 +14,7 @@ export default function PedidoExtra() {
   const [error, setError] = useState("");
   const [enviado, setEnviado] = useState(false);
 
+  const esEmoji = tipoExtra === "Emoji";
   const total = (Number(cantidad) || 0) * (Number(precioUnitario) || 0);
 
   useEffect(() => {
@@ -25,14 +28,19 @@ export default function PedidoExtra() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setEnviando(true);
     setError("");
+    if (!tipoExtra) {
+      setError("Elegí qué querés agregar.");
+      return;
+    }
+    setEnviando(true);
     try {
-      const detalle = Number(cantidad) > 1 ? `${descripcion} (x${cantidad})` : descripcion;
+      const detalle = Number(cantidad) > 1 ? `${tipoExtra} (x${cantidad})` : tipoExtra;
+      const talleFinal = esEmoji ? "" : talle;
       const resp = await fetch("/api/extra-publico", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ colegioId, alumnoId, descripcion: detalle, monto: total, talle }),
+        body: JSON.stringify({ colegioId, alumnoId, descripcion: detalle, monto: total, talle: talleFinal }),
       });
       const data = await resp.json();
       if (!resp.ok) {
@@ -70,22 +78,29 @@ export default function PedidoExtra() {
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label>¿Qué querés agregar?</label>
-              <input
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
-                placeholder="Ej: Remera extra, agregado con emoji…"
-                required
-                autoFocus
-              />
+              <div className="chip-group">
+                {TIPOS_EXTRA.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`chip ${tipoExtra === t ? "selected" : ""}`}
+                    onClick={() => setTipoExtra(tipoExtra === t ? "" : t)}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="field">
-              <label>Talle (opcional)</label>
-              <input
-                value={talle}
-                onChange={(e) => setTalle(e.target.value)}
-                placeholder="S, M, L, 12, 14…"
-              />
-            </div>
+            {!esEmoji && (
+              <div className="field">
+                <label>Talle (opcional)</label>
+                <input
+                  value={talle}
+                  onChange={(e) => setTalle(e.target.value)}
+                  placeholder="S, M, L, 12, 14…"
+                />
+              </div>
+            )}
             <div className="form-row">
               <div className="field" style={{ maxWidth: 110 }}>
                 <label>Cantidad</label>

@@ -436,30 +436,38 @@ function EditarAlumnoModal({ alumno, onClose, onSaved }) {
   );
 }
 
+const TIPOS_EXTRA = ["Remera", "Chomba", "Buzo", "Campera", "Emoji"];
+
 function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
-  const [descripcion, setDescripcion] = useState("");
+  const [tipoExtra, setTipoExtra] = useState("");
   const [talle, setTalle] = useState("");
   const [cantidad, setCantidad] = useState(1);
   const [precioUnitario, setPrecioUnitario] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const esEmoji = tipoExtra === "Emoji";
   const total = (Number(cantidad) || 0) * (Number(precioUnitario) || 0);
   const cuotasPendientes = cuotas.filter((c) => !c.esSena && !c.esExtra && c.estado !== "pagada");
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    if (!tipoExtra) {
+      setError("Elegí qué se está agregando.");
+      return;
+    }
     setSaving(true);
     try {
-      const detalle = Number(cantidad) > 1 ? `${descripcion} (x${cantidad})` : descripcion;
+      const detalle = Number(cantidad) > 1 ? `${tipoExtra} (x${cantidad})` : tipoExtra;
+      const talleFinal = esEmoji ? "" : talle;
       if (cuotasPendientes.length > 0) {
         await repartirExtraEnCuotas({
           alumnoId: alumno.id,
           descripcion: detalle,
           montoTotal: total,
           cuotasPendientes,
-          talle,
+          talle: talleFinal,
         });
       } else {
         // No hay cuotas pendientes para repartir (ej: alumno ya pagó todo),
@@ -471,7 +479,7 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
           descripcion: detalle,
           monto: total,
           numero: siguienteNumero,
-          talle,
+          talle: talleFinal,
         });
       }
       onCreated();
@@ -488,23 +496,30 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
         <h2>Agregar extra — {alumno.apellido}, {alumno.nombre}</h2>
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label>Descripción</label>
-            <input
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="Ej: Remera extra, agregado con emoji…"
-              required
-              autoFocus
-            />
+            <label>¿Qué se agrega?</label>
+            <div className="chip-group">
+              {TIPOS_EXTRA.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`chip ${tipoExtra === t ? "selected" : ""}`}
+                  onClick={() => setTipoExtra(tipoExtra === t ? "" : t)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="field">
-            <label>Talle (opcional)</label>
-            <input
-              value={talle}
-              onChange={(e) => setTalle(e.target.value)}
-              placeholder="S, M, L, 12, 14…"
-            />
-          </div>
+          {!esEmoji && (
+            <div className="field">
+              <label>Talle (opcional)</label>
+              <input
+                value={talle}
+                onChange={(e) => setTalle(e.target.value)}
+                placeholder="S, M, L, 12, 14…"
+              />
+            </div>
+          )}
           <div className="form-row">
             <div className="field" style={{ maxWidth: 110 }}>
               <label>Cantidad</label>
