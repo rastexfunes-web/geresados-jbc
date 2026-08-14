@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   getColegio,
   actualizarColegio,
+  actualizarCuotasPendientesColegio,
   listAlumnos,
   crearAlumno,
   eliminarAlumno,
@@ -308,23 +309,32 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
   const [fechaPrimerVencimiento, setFechaPrimerVencimiento] = useState(colegio.fechaPrimerVencimiento || "");
   const [frecuenciaDias, setFrecuenciaDias] = useState(colegio.frecuenciaDias || 30);
   const [recargoPorcentaje, setRecargoPorcentaje] = useState(colegio.recargoPorcentaje || "");
+  const [aplicarAAlumnos, setAplicarAAlumnos] = useState(false);
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
+      const nuevoMontoCuota = Number(montoCuota) || 0;
+      const nuevoMontoSena = Number(montoSena) || 0;
       await actualizarColegio(colegio.id, {
         nombre,
         cantidadCuotas: Number(cantidadCuotas) || 1,
-        montoCuota: Number(montoCuota) || 0,
-        montoSena: Number(montoSena) || 0,
+        montoCuota: nuevoMontoCuota,
+        montoSena: nuevoMontoSena,
         fechaEntrega,
         imagenUrl,
         fechaPrimerVencimiento,
         frecuenciaDias: Number(frecuenciaDias) || 30,
         recargoPorcentaje: Number(recargoPorcentaje) || 0,
       });
+      if (aplicarAAlumnos) {
+        await actualizarCuotasPendientesColegio(colegio.id, {
+          nuevoMontoCuota,
+          nuevoMontoSena,
+        });
+      }
       onSaved();
     } finally {
       setSaving(false);
@@ -413,8 +423,19 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
             />
           </div>
           <p style={{ fontSize: 12, color: "var(--slate)" }}>
-            Cambiar la cantidad de cuotas, el monto, la seña, el vencimiento o el recargo solo afecta a los alumnos que cargues de ahora en adelante — no modifica las cuotas de los alumnos que ya tenías.
+            Cambiar la cantidad de cuotas, el vencimiento o el recargo solo afecta a los alumnos que cargues de ahora en adelante.
           </p>
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "var(--navy)", marginBottom: 16, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={aplicarAAlumnos}
+              onChange={(e) => setAplicarAAlumnos(e.target.checked)}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              Aplicar el nuevo monto de cuota (${Number(montoCuota) || 0}) y de seña (${Number(montoSena) || 0}) también a las cuotas <strong>pendientes</strong> de los alumnos que ya tenía cargados este colegio (no toca las ya pagadas, ni los que tengan un monto personalizado a propósito).
+            </span>
+          </label>
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
