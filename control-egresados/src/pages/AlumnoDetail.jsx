@@ -12,6 +12,8 @@ import {
   formatFechaAR,
   agregarExtraAlumno,
   repartirExtraEnCuotas,
+  editarTalleExtraRepartido,
+  editarTalleCuotaExtra,
   actualizarAlumno,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
@@ -111,6 +113,20 @@ export default function AlumnoDetail() {
     }
   }
 
+  async function handleEditarTalleExtraRepartido(indice, talleActual) {
+    const nuevoTalle = window.prompt("Nuevo talle para este extra:", talleActual || "");
+    if (nuevoTalle === null) return;
+    await editarTalleExtraRepartido(alumno.id, alumno.extras, indice, nuevoTalle);
+    refresh();
+  }
+
+  async function handleEditarTalleCuotaExtra(cuota) {
+    const nuevoTalle = window.prompt("Nuevo talle para este extra:", cuota.talle || "");
+    if (nuevoTalle === null) return;
+    await editarTalleCuotaExtra(cuota.id, nuevoTalle);
+    refresh();
+  }
+
   return (
     <div>
       <div className="crumb">
@@ -193,8 +209,17 @@ export default function AlumnoDetail() {
         <div className="card" style={{ padding: "14px 20px", marginBottom: 24, fontSize: 13, color: "var(--slate)" }}>
           <strong style={{ color: "var(--navy)", display: "block", marginBottom: 6 }}>Extras aplicados</strong>
           {alumno.extras.map((ex, i) => (
-            <div key={i}>
-              {ex.descripcion}{ex.talle ? ` (talle ${ex.talle})` : ""} — ${Number(ex.monto).toLocaleString("es-AR")} (repartido en {ex.repartidoEnCuotas} cuota{ex.repartidoEnCuotas !== 1 ? "s" : ""})
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+              <span>
+                {ex.descripcion}{ex.talle ? ` (talle ${ex.talle})` : ""} — ${Number(ex.monto).toLocaleString("es-AR")} (repartido en {ex.repartidoEnCuotas} cuota{ex.repartidoEnCuotas !== 1 ? "s" : ""})
+              </span>
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ padding: "2px 6px", fontSize: 12 }}
+                onClick={() => handleEditarTalleExtraRepartido(i, ex.talle)}
+              >
+                Editar talle
+              </button>
             </div>
           ))}
         </div>
@@ -241,6 +266,14 @@ export default function AlumnoDetail() {
                     {c.metodoPago === "mercadopago" ? "Mercado Pago" : c.metodoPago === "manual" ? "Manual" : "—"}
                   </td>
                   <td style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    {c.esExtra && (
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => handleEditarTalleCuotaExtra(c)}
+                      >
+                        Editar talle
+                      </button>
+                    )}
                     {c.estado !== "pagada" && (
                       <>
                         <button

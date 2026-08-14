@@ -336,6 +336,22 @@ export async function repartirExtraEnCuotas({ alumnoId, descripcion, montoTotal,
   await batch.commit();
 }
 
+// Edita el talle de un extra ya cargado que se repartió entre cuotas (vive
+// dentro del array "extras" del alumno, así que hay que reescribir el
+// array completo con ese ítem corregido).
+export async function editarTalleExtraRepartido(alumnoId, extrasActuales, indice, nuevoTalle) {
+  const nuevosExtras = extrasActuales.map((ex, i) =>
+    i === indice ? { ...ex, talle: nuevoTalle } : ex
+  );
+  return updateDoc(doc(db, "alumnos", alumnoId), { extras: nuevosExtras });
+}
+
+// Edita el talle de un extra que quedó como cobro aparte (vive como su
+// propia cuota en la colección "cuotas").
+export async function editarTalleCuotaExtra(cuotaId, nuevoTalle) {
+  return updateDoc(doc(db, "cuotas", cuotaId), { talle: nuevoTalle });
+}
+
 export async function actualizarAlumno(alumnoId, data) {
   return updateDoc(doc(db, "alumnos", alumnoId), data);
 }
