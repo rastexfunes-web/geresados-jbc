@@ -14,6 +14,8 @@ import {
   repartirExtraEnCuotas,
   editarTalleExtraRepartido,
   editarTalleCuotaExtra,
+  eliminarExtraRepartido,
+  eliminarCuotaExtra,
   actualizarAlumno,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
@@ -127,6 +129,21 @@ export default function AlumnoDetail() {
     refresh();
   }
 
+  async function handleEliminarExtraRepartido(indice, ex) {
+    if (!confirm(`¿Eliminar el extra "${ex.descripcion}"? Se le resta el monto a las cuotas que todavía estén pendientes.`)) return;
+    await eliminarExtraRepartido(alumno.id, alumno.extras, indice);
+    refresh();
+  }
+
+  async function handleEliminarCuotaExtra(cuota) {
+    const mensaje = cuota.estado === "pagada"
+      ? `¿Eliminar el extra "${cuota.descripcion}"? Ya está marcado como pagado, esto solo lo saca de la lista.`
+      : `¿Eliminar el extra "${cuota.descripcion}"?`;
+    if (!confirm(mensaje)) return;
+    await eliminarCuotaExtra(cuota.id);
+    refresh();
+  }
+
   return (
     <div>
       <div className="crumb">
@@ -220,6 +237,13 @@ export default function AlumnoDetail() {
               >
                 Editar talle
               </button>
+              <button
+                className="btn btn-danger btn-sm"
+                style={{ padding: "2px 6px", fontSize: 12 }}
+                onClick={() => handleEliminarExtraRepartido(i, ex)}
+              >
+                Eliminar
+              </button>
             </div>
           ))}
         </div>
@@ -267,12 +291,20 @@ export default function AlumnoDetail() {
                   </td>
                   <td style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     {c.esExtra && (
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => handleEditarTalleCuotaExtra(c)}
-                      >
-                        Editar talle
-                      </button>
+                      <>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => handleEditarTalleCuotaExtra(c)}
+                        >
+                          Editar talle
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => handleEliminarCuotaExtra(c)}
+                        >
+                          Eliminar
+                        </button>
+                      </>
                     )}
                     {c.estado !== "pagada" && (
                       <>

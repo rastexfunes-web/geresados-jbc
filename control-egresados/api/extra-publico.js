@@ -87,14 +87,16 @@ export default async function handler(req, res) {
         const base = Math.floor((montoTotal / cantidad) * 100) / 100;
 
         const batch = db.batch();
+        const cuotasAfectadas = [];
         cuotasPendientes.forEach((c, i) => {
           const esUltima = i === cantidad - 1;
-          const montoAgregado = esUltima ? montoTotal - base * (cantidad - 1) : base;
+          const montoAgregado = Math.round((esUltima ? montoTotal - base * (cantidad - 1) : base) * 100) / 100;
           batch.update(db.collection("cuotas").doc(c.id), {
             monto: Math.round((c.monto + montoAgregado) * 100) / 100,
             mpPreferenceId: null,
             mpInitPoint: null,
           });
+          cuotasAfectadas.push({ id: c.id, montoAgregado });
         });
         batch.update(db.collection("alumnos").doc(alumnoId), {
           extras: FieldValue.arrayUnion({
@@ -102,6 +104,7 @@ export default async function handler(req, res) {
             talle: talle || "",
             monto: montoTotal,
             repartidoEnCuotas: cantidad,
+            cuotasAfectadas,
             fecha: new Date().toISOString(),
             creadoPorAlumno: true,
           }),

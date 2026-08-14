@@ -312,15 +312,17 @@ export async function repartirExtraEnCuotas({ alumnoId, descripcion, montoTotal,
   const base = Math.floor((montoTotal / cantidad) * 100) / 100;
 
   const batch = writeBatch(db);
+  const cuotasAfectadas = [];
   cuotasPendientes.forEach((c, i) => {
     const esUltima = i === cantidad - 1;
     // La última cuota absorbe el resto del redondeo, para que sume exacto.
-    const montoAgregado = esUltima ? montoTotal - base * (cantidad - 1) : base;
+    const montoAgregado = Math.round((esUltima ? montoTotal - base * (cantidad - 1) : base) * 100) / 100;
     batch.update(doc(db, "cuotas", c.id), {
       monto: Math.round((c.monto + montoAgregado) * 100) / 100,
       mpPreferenceId: null,
       mpInitPoint: null,
     });
+    cuotasAfectadas.push({ id: c.id, montoAgregado });
   });
 
   batch.update(doc(db, "alumnos", alumnoId), {
@@ -329,6 +331,7 @@ export async function repartirExtraEnCuotas({ alumnoId, descripcion, montoTotal,
       talle: talle || "",
       monto: montoTotal,
       repartidoEnCuotas: cantidad,
+      cuotasAfectadas,
       fecha: new Date().toISOString(),
     }),
   });
@@ -350,6 +353,36 @@ export async function editarTalleExtraRepartido(alumnoId, extrasActuales, indice
 // propia cuota en la colección "cuotas").
 export async function editarTalleCuotaExtra(cuotaId, nuevoTalle) {
   return updateDoc(doc(db, "cuotas", cuotaId), { talle: nuevoTalle });
+}
+
+// Elimina un extra que se había repartido entre cuotas: le resta el monto
+// que le había sumado a cada cuota afectada (solo si esa cuota todavía no
+// está pagada, para no descuadrar plata ya cobrada) y lo saca del historial.
+export async function eliminarExtraRepartido(alumnoId, extrasActuales, indice) {
+  const extra = extrasActuales[indice];
+  const cuotasAfectadas = extra.cuotasAfectadas || [];
+
+  const batch = writeBatch(db);
+  for (const ca of cuotasAfectadas) {
+    const snap = await getDoc(doc(db, "cuotas", ca.id));
+    if (snap.exists() && snap.data().estado !== "pagada") {
+      const montoActual = snap.data().monto;
+      batch.update(doc(db, "cuotas", ca.id), {
+        monto: Math.max(0, Math.round((montoActual - ca.montoAgregado) * 100) / 100),
+        mpPreferenceId: null,
+        mpInitPoint: null,
+      });
+    }
+  }
+
+  const nuevosExtras = extrasActuales.filter((_, i) => i !== indice);
+  batch.update(doc(db, "alumnos", alumnoId), { extras: nuevosExtras });
+  await batch.commit();
+}
+
+// Elimina un extra que había quedado como cobro aparte (su propia cuota).
+export async function eliminarCuotaExtra(cuotaId) {
+  return deleteDoc(doc(db, "cuotas", cuotaId));
 }
 
 export async function actualizarAlumno(alumnoId, data) {
