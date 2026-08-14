@@ -4,6 +4,7 @@ import PrivateRoute from "./PrivateRoute";
 import Layout from "./Layout";
 import Login from "./pages/Login";
 import PagoRealizado from "./pages/PagoRealizado";
+import PedidoExtra from "./pages/PedidoExtra";
 import Colegios from "./pages/Colegios";
 import ColegioDetail from "./pages/ColegioDetail";
 import AlumnoDetail from "./pages/AlumnoDetail";
@@ -18,6 +19,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/pago-realizado" element={<PagoRealizado />} />
+          <Route path="/colegios/:colegioId/alumnos/:alumnoId/extra" element={<PedidoExtra />} />
           <Route
             path="/"
             element={

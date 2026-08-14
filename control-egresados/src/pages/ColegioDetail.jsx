@@ -282,6 +282,10 @@ function formatFecha(fechaISO) {
 }
 
 function EditarColegioModal({ colegio, onClose, onSaved }) {
+  const [nombre, setNombre] = useState(colegio.nombre || "");
+  const [cantidadCuotas, setCantidadCuotas] = useState(colegio.cantidadCuotas || 1);
+  const [montoCuota, setMontoCuota] = useState(colegio.montoCuota || "");
+  const [montoSena, setMontoSena] = useState(colegio.montoSena || "");
   const [fechaEntrega, setFechaEntrega] = useState(colegio.fechaEntrega || "");
   const [imagenUrl, setImagenUrl] = useState(colegio.imagenUrl || "");
   const [fechaPrimerVencimiento, setFechaPrimerVencimiento] = useState(colegio.fechaPrimerVencimiento || "");
@@ -294,6 +298,10 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
     setSaving(true);
     try {
       await actualizarColegio(colegio.id, {
+        nombre,
+        cantidadCuotas: Number(cantidadCuotas) || 1,
+        montoCuota: Number(montoCuota) || 0,
+        montoSena: Number(montoSena) || 0,
         fechaEntrega,
         imagenUrl,
         fechaPrimerVencimiento,
@@ -311,6 +319,44 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>Editar {colegio.nombre}</h2>
         <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label>Nombre del colegio</label>
+            <input value={nombre} onChange={(e) => setNombre(e.target.value)} required autoFocus />
+          </div>
+          <div className="form-row">
+            <div className="field">
+              <label>Cantidad de cuotas</label>
+              <input
+                type="number"
+                min="1"
+                value={cantidadCuotas}
+                onChange={(e) => setCantidadCuotas(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label>Monto por cuota ($)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={montoCuota}
+                onChange={(e) => setMontoCuota(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label>Seña ($)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={montoSena}
+              onChange={(e) => setMontoSena(e.target.value)}
+              placeholder="0"
+            />
+          </div>
           <div className="field">
             <label>Fecha de entrega aproximada</label>
             <input type="date" value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)} />
@@ -350,7 +396,7 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
             />
           </div>
           <p style={{ fontSize: 12, color: "var(--slate)" }}>
-            Estos cambios de vencimiento y recargo solo aplican a los alumnos que cargues de ahora en adelante.
+            Cambiar la cantidad de cuotas, el monto, la seña, el vencimiento o el recargo solo afecta a los alumnos que cargues de ahora en adelante — no modifica las cuotas de los alumnos que ya tenías.
           </p>
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>

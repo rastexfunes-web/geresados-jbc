@@ -10,6 +10,7 @@ import {
   where,
   orderBy,
   writeBatch,
+  arrayUnion,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -295,6 +296,42 @@ export async function agregarExtraAlumno({ alumnoId, colegioId, descripcion, mon
     fechaPago: null,
     createdAt: serverTimestamp(),
   });
+}
+
+// Reparte un monto extra (ej: remera de más, agregado con emoji) entre las
+// cuotas todavía pendientes del alumno, sumándoselo a cada una en partes
+// iguales, en vez de crear un cobro aparte. Las cuotas afectadas pierden su
+// cupón de Mercado Pago ya generado (si tenían), porque el monto cambió y
+// hay que generar uno nuevo.
+export async function repartirExtraEnCuotas({ alumnoId, descripcion, montoTotal, cuotasPendientes }) {
+  if (!cuotasPendientes.length) {
+    throw new Error("No hay cuotas pendientes para repartir el extra.");
+  }
+  const cantidad = cuotasPendientes.length;
+  const base = Math.floor((montoTotal / cantidad) * 100) / 100;
+
+  const batch = writeBatch(db);
+  cuotasPendientes.forEach((c, i) => {
+    const esUltima = i === cantidad - 1;
+    // La última cuota absorbe el resto del redondeo, para que sume exacto.
+    const montoAgregado = esUltima ? montoTotal - base * (cantidad - 1) : base;
+    batch.update(doc(db, "cuotas", c.id), {
+      monto: Math.round((c.monto + montoAgregado) * 100) / 100,
+      mpPreferenceId: null,
+      mpInitPoint: null,
+    });
+  });
+
+  batch.update(doc(db, "alumnos", alumnoId), {
+    extras: arrayUnion({
+      descripcion,
+      monto: montoTotal,
+      repartidoEnCuotas: cantidad,
+      fecha: new Date().toISOString(),
+    }),
+  });
+
+  await batch.commit();
 }
 
 export async function actualizarAlumno(alumnoId, data) {
