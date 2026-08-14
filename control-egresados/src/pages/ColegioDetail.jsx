@@ -19,6 +19,7 @@ export default function ColegioDetail() {
   const [resumenes, setResumenes] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [recalculando, setRecalculando] = useState(false);
 
   async function refresh() {
     const c = await getColegio(colegioId);
@@ -155,6 +156,26 @@ export default function ColegioDetail() {
     ventana.print();
   }
 
+  async function handleRecalcularConExtras() {
+    if (
+      !confirm(
+        "¿Recalcular las cuotas pendientes de todos los alumnos, sumando de nuevo los extras que tengan cargados? No toca cuotas ya pagadas ni alumnos con precio personalizado."
+      )
+    ) {
+      return;
+    }
+    setRecalculando(true);
+    try {
+      await actualizarCuotasPendientesColegio(colegio.id, {
+        nuevoMontoCuota: colegio.montoCuota,
+        nuevoMontoSena: colegio.montoSena,
+      });
+      await refresh();
+    } finally {
+      setRecalculando(false);
+    }
+  }
+
   return (
     <div>
       <div className="crumb"><Link to="/">Colegios</Link> / {colegio.nombre}</div>
@@ -166,6 +187,9 @@ export default function ColegioDetail() {
         <div style={{ display: "flex", gap: 10 }}>
           <button className="btn btn-outline" onClick={() => setShowEditModal(true)}>
             Editar colegio
+          </button>
+          <button className="btn btn-outline" onClick={handleRecalcularConExtras} disabled={recalculando || !alumnos?.length}>
+            {recalculando ? "Recalculando…" : "Recalcular cuotas (extras)"}
           </button>
           <button className="btn btn-outline" onClick={handleImprimirTalles} disabled={!alumnos?.length}>
             Imprimir talles
