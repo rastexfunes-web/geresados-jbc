@@ -60,12 +60,21 @@ export async function actualizarColegio(colegioId, data) {
 // Aplica un monto de cuota y/o de seña nuevo a las cuotas y señas que
 // todavía estén PENDIENTES de todos los alumnos de un colegio (no toca las
 // ya pagadas, ni los extras, ni los alumnos que tengan un precio
-// personalizado cargado a propósito).
+// personalizado cargado a propósito). Si una cuota ya tenía un extra
+// repartido sumado, se le respeta esa parte y solo se actualiza el monto
+// base del plan.
 export async function actualizarCuotasPendientesColegio(colegioId, { nuevoMontoCuota, nuevoMontoSena }) {
   const alumnosSnap = await getDocs(query(collection(db, "alumnos"), where("colegioId", "==", colegioId)));
   const idsConPrecioPersonalizado = new Set();
+  const extraAgregadoPorCuota = {};
   alumnosSnap.forEach((d) => {
-    if (d.data().precioPersonalizado) idsConPrecioPersonalizado.add(d.id);
+    const a = d.data();
+    if (a.precioPersonalizado) idsConPrecioPersonalizado.add(d.id);
+    (a.extras || []).forEach((ex) => {
+      (ex.cuotasAfectadas || []).forEach((ca) => {
+        extraAgregadoPorCuota[ca.id] = (extraAgregadoPorCuota[ca.id] || 0) + ca.montoAgregado;
+      });
+    });
   });
 
   const cuotasSnap = await getDocs(query(collection(db, "cuotas"), where("colegioId", "==", colegioId)));
@@ -74,10 +83,11 @@ export async function actualizarCuotasPendientesColegio(colegioId, { nuevoMontoC
     const c = d.data();
     if (c.estado === "pagada" || c.esExtra) return;
     if (idsConPrecioPersonalizado.has(c.alumnoId)) return;
-    const nuevoMonto = c.esSena ? nuevoMontoSena : nuevoMontoCuota;
-    if (nuevoMonto === undefined || nuevoMonto === null || Number.isNaN(nuevoMonto)) return;
+    const base = c.esSena ? nuevoMontoSena : nuevoMontoCuota;
+    if (base === undefined || base === null || Number.isNaN(base)) return;
+    const extra = extraAgregadoPorCuota[d.id] || 0;
     batch.update(doc(db, "cuotas", d.id), {
-      monto: nuevoMonto,
+      monto: Math.round((base + extra) * 100) / 100,
       mpPreferenceId: null,
       mpInitPoint: null,
     });
