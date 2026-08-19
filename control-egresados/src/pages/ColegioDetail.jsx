@@ -10,7 +10,9 @@ import {
   eliminarAlumno,
   listCuotasAlumno,
   resumenDeuda,
+  montoConRecargo,
 } from "../data";
+import { generarCuponCuota } from "../mercadopago";
 
 export default function ColegioDetail() {
   const { colegioId } = useParams();
@@ -21,6 +23,7 @@ export default function ColegioDetail() {
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
+  const [showWhatsappModal, setShowWhatsappModal] = useState(false);
 
   async function refresh() {
     const c = await getColegio(colegioId);
@@ -195,6 +198,9 @@ export default function ColegioDetail() {
           <button className="btn btn-outline" onClick={handleImprimirTalles} disabled={!alumnos?.length}>
             Imprimir talles
           </button>
+          <button className="btn btn-outline" onClick={() => setShowWhatsappModal(true)} disabled={!alumnos?.length}>
+            Enviar cuotas por WhatsApp
+          </button>
           <button className="btn btn-gold" onClick={() => setShowModal(true)}>
             + Nuevo alumno
           </button>
@@ -315,6 +321,10 @@ export default function ColegioDetail() {
           }}
         />
       )}
+
+      {showWhatsappModal && (
+        <EnviarWhatsappModal colegio={colegio} alumnos={alumnos} onClose={() => setShowWhatsappModal(false)} />
+      )}
     </div>
   );
 }
@@ -322,6 +332,123 @@ export default function ColegioDetail() {
 function formatFecha(fechaISO) {
   const [y, m, d] = fechaISO.split("-");
   return `${d}/${m}/${y}`;
+}
+
+function EnviarWhatsappModal({ colegio, alumnos, onClose }) {
+  const [items, setItems] = useState(null);
+  const [progreso, setProgreso] = useState(0);
+  const [enviados, setEnviados] = useState({});
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function preparar() {
+      const pendientes = [];
+      for (const alumno of alumnos) {
+        const cuotas = await listCuotasAlumno(alumno.id);
+        const sinPagar = cuotas
+          .filter((c) => c.estado !== "pagada")
+          .sort((a, b) => (a.numero || 0) - (b.numero || 0));
+        if (sinPagar.length > 0) {
+          pendientes.push({ alumno, cuota: sinPagar[0] });
+        }
+      }
+      if (cancelado) return;
+
+      // Genera el cupón de las que todavía no lo tengan, una por una.
+      for (let i = 0; i < pendientes.length; i++) {
+        const { alumno, cuota } = pendientes[i];
+        if (!cuota.mpInitPoint) {
+          try {
+            const link = await generarCuponCuota(cuota, alumno, colegio);
+            cuota.mpInitPoint = link;
+          } catch {
+            // si falla, lo dejamos sin link; el mensaje de WhatsApp avisa igual
+          }
+        }
+        if (cancelado) return;
+        setProgreso(i + 1);
+      }
+      if (!cancelado) setItems(pendientes);
+    }
+
+    preparar();
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function linkWhatsappPara(alumno, cuota) {
+    const detalle = cuota.esExtra ? cuota.descripcion : cuota.esSena ? "la seña" : `la cuota #${cuota.numero}`;
+    const monto = montoConRecargo(cuota, colegio);
+    const mensaje = cuota.mpInitPoint
+      ? `Hola ${alumno.nombre}! Te paso el link para pagar ${detalle} de ${colegio.nombre} ($${Number(monto).toLocaleString("es-AR")}): ${cuota.mpInitPoint}`
+      : `Hola ${alumno.nombre}! Te recuerdo ${detalle} de ${colegio.nombre} ($${Number(monto).toLocaleString("es-AR")}).`;
+    const telefono = (alumno.telefono || "").replace(/\D/g, "");
+    const base = telefono ? `https://wa.me/${telefono}` : "https://wa.me/";
+    return `${base}?text=${encodeURIComponent(mensaje)}`;
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ width: 560, maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h2>Enviar cuotas por WhatsApp — {colegio.nombre}</h2>
+
+        {items === null && (
+          <p style={{ fontSize: 14, color: "var(--slate)" }}>
+            Preparando cupones… {progreso} / {alumnos.length}
+          </p>
+        )}
+
+        {items?.length === 0 && (
+          <p style={{ fontSize: 14, color: "var(--slate)" }}>Todos los alumnos de este colegio están al día.</p>
+        )}
+
+        {items?.length > 0 && (
+          <>
+            <p style={{ fontSize: 13, color: "var(--slate)" }}>
+              {items.length} alumno{items.length !== 1 ? "s" : ""} con algo pendiente. Hacé click en "Enviar" de a uno — cada uno abre WhatsApp con el mensaje ya armado.
+            </p>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Alumno</th>
+                  <th>Cuota</th>
+                  <th>Monto</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(({ alumno, cuota }) => (
+                  <tr key={alumno.id}>
+                    <td>{alumno.apellido}, {alumno.nombre}</td>
+                    <td>{cuota.esExtra ? cuota.descripcion : cuota.esSena ? "Seña" : `#${cuota.numero}`}</td>
+                    <td>${Number(montoConRecargo(cuota, colegio)).toLocaleString("es-AR")}</td>
+                    <td>
+                      <a
+                        className={`btn btn-sm ${enviados[alumno.id] ? "btn-ghost" : "btn-gold"}`}
+                        href={linkWhatsappPara(alumno, cuota)}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => setEnviados((prev) => ({ ...prev, [alumno.id]: true }))}
+                      >
+                        {enviados[alumno.id] ? "✓ Enviado" : "Enviar"}
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        <div className="modal-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function EditarColegioModal({ colegio, onClose, onSaved }) {
