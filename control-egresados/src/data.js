@@ -95,6 +95,69 @@ export async function actualizarCuotasPendientesColegio(colegioId, { nuevoMontoC
   await batch.commit();
 }
 
+// Ajusta la CANTIDAD de cuotas de los alumnos ya cargados de un colegio a
+// la nueva cantidad configurada: agrega las cuotas que falten (con el monto
+// y vencimiento correspondientes) o quita las que sobren, siempre que
+// todavía estén pendientes (nunca borra una cuota ya pagada). No toca a los
+// alumnos con precio personalizado.
+export async function actualizarCantidadCuotasColegio(colegioId, colegio) {
+  const alumnosSnap = await getDocs(query(collection(db, "alumnos"), where("colegioId", "==", colegioId)));
+  const cuotasSnap = await getDocs(query(collection(db, "cuotas"), where("colegioId", "==", colegioId)));
+
+  const cuotasPorAlumno = {};
+  cuotasSnap.forEach((d) => {
+    const c = d.data();
+    if (c.esSena || c.esExtra) return;
+    if (!cuotasPorAlumno[c.alumnoId]) cuotasPorAlumno[c.alumnoId] = [];
+    cuotasPorAlumno[c.alumnoId].push({ id: d.id, ...c });
+  });
+
+  const batch = writeBatch(db);
+  let agregadas = 0;
+  let quitadas = 0;
+
+  alumnosSnap.forEach((d) => {
+    const alumno = d.data();
+    if (alumno.precioPersonalizado) return;
+    const alumnoId = d.id;
+    const cuotasActuales = cuotasPorAlumno[alumnoId] || [];
+    const cantidadActual = cuotasActuales.length;
+    const cantidadNueva = colegio.cantidadCuotas;
+
+    if (cantidadNueva > cantidadActual) {
+      for (let i = cantidadActual + 1; i <= cantidadNueva; i++) {
+        const cuotaRef = doc(collection(db, "cuotas"));
+        batch.set(cuotaRef, {
+          alumnoId,
+          colegioId,
+          numero: i,
+          esSena: false,
+          esExtra: false,
+          monto: colegio.montoCuota,
+          fechaVencimiento: calcularVencimiento(colegio, i),
+          estado: "pendiente",
+          metodoPago: null,
+          mpPreferenceId: null,
+          mpInitPoint: null,
+          fechaPago: null,
+          createdAt: serverTimestamp(),
+        });
+        agregadas++;
+      }
+    } else if (cantidadNueva < cantidadActual) {
+      cuotasActuales
+        .filter((c) => c.numero > cantidadNueva && c.estado !== "pagada")
+        .forEach((c) => {
+          batch.delete(doc(db, "cuotas", c.id));
+          quitadas++;
+        });
+    }
+  });
+
+  await batch.commit();
+  return { agregadas, quitadas };
+}
+
 export async function eliminarColegio(colegioId) {
   const alumnos = await listAlumnos(colegioId);
   for (const a of alumnos) {

@@ -4,6 +4,7 @@ import {
   getColegio,
   actualizarColegio,
   actualizarCuotasPendientesColegio,
+  actualizarCantidadCuotasColegio,
   listAlumnos,
   crearAlumno,
   eliminarAlumno,
@@ -342,9 +343,10 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
     try {
       const nuevoMontoCuota = Number(montoCuota) || 0;
       const nuevoMontoSena = Number(montoSena) || 0;
-      await actualizarColegio(colegio.id, {
+      const nuevaCantidadCuotas = Number(cantidadCuotas) || 1;
+      const colegioActualizado = {
         nombre,
-        cantidadCuotas: Number(cantidadCuotas) || 1,
+        cantidadCuotas: nuevaCantidadCuotas,
         montoCuota: nuevoMontoCuota,
         montoSena: nuevoMontoSena,
         fechaEntrega,
@@ -352,12 +354,16 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
         fechaPrimerVencimiento,
         frecuenciaDias: Number(frecuenciaDias) || 30,
         recargoPorcentaje: Number(recargoPorcentaje) || 0,
-      });
+      };
+      await actualizarColegio(colegio.id, colegioActualizado);
       if (aplicarAAlumnos) {
         await actualizarCuotasPendientesColegio(colegio.id, {
           nuevoMontoCuota,
           nuevoMontoSena,
         });
+        if (nuevaCantidadCuotas !== colegio.cantidadCuotas) {
+          await actualizarCantidadCuotasColegio(colegio.id, { ...colegio, ...colegioActualizado });
+        }
       }
       onSaved();
     } finally {
@@ -457,7 +463,7 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
               style={{ marginTop: 3 }}
             />
             <span>
-              Aplicar el nuevo monto de cuota (${Number(montoCuota) || 0}) y de seña (${Number(montoSena) || 0}) también a las cuotas <strong>pendientes</strong> de los alumnos que ya tenía cargados este colegio (no toca las ya pagadas, ni los que tengan un monto personalizado a propósito).
+              Aplicar el nuevo monto de cuota (${Number(montoCuota) || 0}), de seña (${Number(montoSena) || 0}) y la cantidad de cuotas ({Number(cantidadCuotas) || 0}) también a los alumnos que ya tenía cargados este colegio (no toca cuotas ya pagadas, ni alumnos con un plan personalizado).
             </span>
           </label>
           <div className="modal-actions">
