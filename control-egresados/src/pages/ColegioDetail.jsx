@@ -335,22 +335,35 @@ function formatFecha(fechaISO) {
 }
 
 function EnviarWhatsappModal({ colegio, alumnos, onClose }) {
+  const [numeroElegido, setNumeroElegido] = useState(null); // 0 = seña, 1..N = cuotas
   const [items, setItems] = useState(null);
   const [progreso, setProgreso] = useState(0);
   const [enviados, setEnviados] = useState({});
 
+  const opciones = [
+    { numero: 0, label: "Seña" },
+    ...Array.from({ length: colegio.cantidadCuotas }, (_, i) => ({
+      numero: i + 1,
+      label: `Cuota ${i + 1}`,
+    })),
+  ];
+
   useEffect(() => {
+    if (numeroElegido === null) return;
     let cancelado = false;
+    setItems(null);
+    setProgreso(0);
+    setEnviados({});
 
     async function preparar() {
       const pendientes = [];
       for (const alumno of alumnos) {
         const cuotas = await listCuotasAlumno(alumno.id);
-        const sinPagar = cuotas
-          .filter((c) => c.estado !== "pagada")
-          .sort((a, b) => (a.numero || 0) - (b.numero || 0));
-        if (sinPagar.length > 0) {
-          pendientes.push({ alumno, cuota: sinPagar[0] });
+        const cuota = cuotas.find(
+          (c) => (numeroElegido === 0 ? c.esSena : !c.esSena && !c.esExtra && c.numero === numeroElegido)
+        );
+        if (cuota && cuota.estado !== "pagada") {
+          pendientes.push({ alumno, cuota });
         }
       }
       if (cancelado) return;
@@ -377,10 +390,10 @@ function EnviarWhatsappModal({ colegio, alumnos, onClose }) {
       cancelado = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [numeroElegido]);
 
   function linkWhatsappPara(alumno, cuota) {
-    const detalle = cuota.esExtra ? cuota.descripcion : cuota.esSena ? "la seña" : `la cuota #${cuota.numero}`;
+    const detalle = cuota.esSena ? "la seña" : `la cuota #${cuota.numero}`;
     const monto = montoConRecargo(cuota, colegio);
     const mensaje = cuota.mpInitPoint
       ? `Hola ${alumno.nombre}! Te paso el link para pagar ${detalle} de ${colegio.nombre} ($${Number(monto).toLocaleString("es-AR")}): ${cuota.mpInitPoint}`
@@ -393,28 +406,45 @@ function EnviarWhatsappModal({ colegio, alumnos, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" style={{ width: 560, maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <h2>Enviar cuotas por WhatsApp — {colegio.nombre}</h2>
+        <h2>Enviar por WhatsApp — {colegio.nombre}</h2>
 
-        {items === null && (
+        <div className="field">
+          <label>¿Qué querés enviar?</label>
+          <div className="chip-group">
+            {opciones.map((op) => (
+              <button
+                key={op.numero}
+                type="button"
+                className={`chip ${numeroElegido === op.numero ? "selected" : ""}`}
+                onClick={() => setNumeroElegido(op.numero)}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {numeroElegido !== null && items === null && (
           <p style={{ fontSize: 14, color: "var(--slate)" }}>
             Preparando cupones… {progreso} / {alumnos.length}
           </p>
         )}
 
         {items?.length === 0 && (
-          <p style={{ fontSize: 14, color: "var(--slate)" }}>Todos los alumnos de este colegio están al día.</p>
+          <p style={{ fontSize: 14, color: "var(--slate)" }}>
+            Ningún alumno tiene esa {numeroElegido === 0 ? "seña" : "cuota"} pendiente.
+          </p>
         )}
 
         {items?.length > 0 && (
           <>
             <p style={{ fontSize: 13, color: "var(--slate)" }}>
-              {items.length} alumno{items.length !== 1 ? "s" : ""} con algo pendiente. Hacé click en "Enviar" de a uno — cada uno abre WhatsApp con el mensaje ya armado.
+              {items.length} alumno{items.length !== 1 ? "s" : ""} con esta pendiente. Hacé click en "Enviar" de a uno — cada uno abre WhatsApp con el mensaje ya armado.
             </p>
             <table className="table">
               <thead>
                 <tr>
                   <th>Alumno</th>
-                  <th>Cuota</th>
                   <th>Monto</th>
                   <th></th>
                 </tr>
@@ -423,7 +453,6 @@ function EnviarWhatsappModal({ colegio, alumnos, onClose }) {
                 {items.map(({ alumno, cuota }) => (
                   <tr key={alumno.id}>
                     <td>{alumno.apellido}, {alumno.nombre}</td>
-                    <td>{cuota.esExtra ? cuota.descripcion : cuota.esSena ? "Seña" : `#${cuota.numero}`}</td>
                     <td>${Number(montoConRecargo(cuota, colegio)).toLocaleString("es-AR")}</td>
                     <td>
                       <a
