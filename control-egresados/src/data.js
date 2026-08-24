@@ -39,6 +39,7 @@ export async function crearColegio({
   frecuenciaDias,
   recargoPorcentaje,
   telefonoDelegada,
+  nombreDelegada,
 }) {
   return addDoc(collection(db, "colegios"), {
     nombre,
@@ -51,6 +52,7 @@ export async function crearColegio({
     frecuenciaDias: Number(frecuenciaDias) || 30,
     recargoPorcentaje: Number(recargoPorcentaje) || 0,
     telefonoDelegada: telefonoDelegada || "",
+    nombreDelegada: nombreDelegada || "",
     createdAt: serverTimestamp(),
   });
 }

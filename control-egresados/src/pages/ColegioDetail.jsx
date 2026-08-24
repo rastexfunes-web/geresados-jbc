@@ -492,6 +492,7 @@ function ExtractoDelegadaModal({ colegio, alumnos, onClose }) {
   const [numeroElegido, setNumeroElegido] = useState(null); // 0 = seña, 1..N = cuotas
   const [datos, setDatos] = useState(null);
   const [telefono, setTelefono] = useState(colegio.telefonoDelegada || "");
+  const [nombreDelegada, setNombreDelegada] = useState(colegio.nombreDelegada || "");
 
   const opciones = [
     { numero: 0, label: "Seña" },
@@ -541,8 +542,12 @@ function ExtractoDelegadaModal({ colegio, alumnos, onClose }) {
       .map((f) => `- ${f.alumno.apellido}, ${f.alumno.nombre}: $${Number(montoConRecargo(f.cuota, colegio)).toLocaleString("es-AR")}`)
       .join("\n");
     const lineasPagados = pagados.map((f) => `- ${f.alumno.apellido}, ${f.alumno.nombre}`).join("\n");
+    const saludo = nombreDelegada
+      ? `Hola ${nombreDelegada}, te envío el resumen de pagos de los compañeros!!\n\n`
+      : "";
 
     return (
+      saludo +
       `*${colegio.nombre} — ${label}*\n\n` +
       `✅ Pagaron (${pagados.length}):\n${lineasPagados || "—"}\n\n` +
       `⏳ Faltan (${pendientes.length}):\n${lineasPendientes || "—"}\n\n` +
@@ -575,6 +580,15 @@ function ExtractoDelegadaModal({ colegio, alumnos, onClose }) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="field">
+          <label>Nombre de la delegada</label>
+          <input
+            value={nombreDelegada}
+            onChange={(e) => setNombreDelegada(e.target.value)}
+            placeholder="Ej: María"
+          />
         </div>
 
         <div className="field">
@@ -644,6 +658,7 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
   const [frecuenciaDias, setFrecuenciaDias] = useState(colegio.frecuenciaDias || 30);
   const [recargoPorcentaje, setRecargoPorcentaje] = useState(colegio.recargoPorcentaje || "");
   const [telefonoDelegada, setTelefonoDelegada] = useState(colegio.telefonoDelegada || "");
+  const [nombreDelegada, setNombreDelegada] = useState(colegio.nombreDelegada || "");
   const [aplicarAAlumnos, setAplicarAAlumnos] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -665,6 +680,7 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
         frecuenciaDias: Number(frecuenciaDias) || 30,
         recargoPorcentaje: Number(recargoPorcentaje) || 0,
         telefonoDelegada,
+        nombreDelegada,
       };
       await actualizarColegio(colegio.id, colegioActualizado);
       if (aplicarAAlumnos) {
@@ -761,6 +777,14 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
               value={recargoPorcentaje}
               onChange={(e) => setRecargoPorcentaje(e.target.value)}
               placeholder="0"
+            />
+          </div>
+          <div className="field">
+            <label>Nombre de la delegada (opcional)</label>
+            <input
+              value={nombreDelegada}
+              onChange={(e) => setNombreDelegada(e.target.value)}
+              placeholder="Ej: María"
             />
           </div>
           <div className="field">

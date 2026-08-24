@@ -86,6 +86,7 @@ function NuevoColegioModal({ onClose, onCreated }) {
   const [frecuenciaDias, setFrecuenciaDias] = useState(30);
   const [recargoPorcentaje, setRecargoPorcentaje] = useState("");
   const [telefonoDelegada, setTelefonoDelegada] = useState("");
+  const [nombreDelegada, setNombreDelegada] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
@@ -103,6 +104,7 @@ function NuevoColegioModal({ onClose, onCreated }) {
         frecuenciaDias,
         recargoPorcentaje,
         telefonoDelegada,
+        nombreDelegada,
       });
       onCreated();
     } finally {
@@ -181,6 +183,14 @@ function NuevoColegioModal({ onClose, onCreated }) {
               value={recargoPorcentaje}
               onChange={(e) => setRecargoPorcentaje(e.target.value)}
               placeholder="0"
+            />
+          </div>
+          <div className="field">
+            <label>Nombre de la delegada (opcional)</label>
+            <input
+              value={nombreDelegada}
+              onChange={(e) => setNombreDelegada(e.target.value)}
+              placeholder="Ej: María"
             />
           </div>
           <div className="field">
