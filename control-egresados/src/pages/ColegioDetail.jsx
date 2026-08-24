@@ -24,6 +24,7 @@ export default function ColegioDetail() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
   const [showWhatsappModal, setShowWhatsappModal] = useState(false);
+  const [showExtractoModal, setShowExtractoModal] = useState(false);
 
   async function refresh() {
     const c = await getColegio(colegioId);
@@ -201,6 +202,9 @@ export default function ColegioDetail() {
           <button className="btn btn-outline" onClick={() => setShowWhatsappModal(true)} disabled={!alumnos?.length}>
             Enviar cuotas por WhatsApp
           </button>
+          <button className="btn btn-outline" onClick={() => setShowExtractoModal(true)} disabled={!alumnos?.length}>
+            Extracto para delegada
+          </button>
           <button className="btn btn-gold" onClick={() => setShowModal(true)}>
             + Nuevo alumno
           </button>
@@ -324,6 +328,10 @@ export default function ColegioDetail() {
 
       {showWhatsappModal && (
         <EnviarWhatsappModal colegio={colegio} alumnos={alumnos} onClose={() => setShowWhatsappModal(false)} />
+      )}
+
+      {showExtractoModal && (
+        <ExtractoDelegadaModal colegio={colegio} alumnos={alumnos} onClose={() => setShowExtractoModal(false)} />
       )}
     </div>
   );
@@ -480,6 +488,151 @@ function EnviarWhatsappModal({ colegio, alumnos, onClose }) {
   );
 }
 
+function ExtractoDelegadaModal({ colegio, alumnos, onClose }) {
+  const [numeroElegido, setNumeroElegido] = useState(null); // 0 = seña, 1..N = cuotas
+  const [datos, setDatos] = useState(null);
+  const [telefono, setTelefono] = useState(colegio.telefonoDelegada || "");
+
+  const opciones = [
+    { numero: 0, label: "Seña" },
+    ...Array.from({ length: colegio.cantidadCuotas }, (_, i) => ({
+      numero: i + 1,
+      label: `Cuota ${i + 1}`,
+    })),
+  ];
+
+  useEffect(() => {
+    if (numeroElegido === null) return;
+    let cancelado = false;
+    setDatos(null);
+
+    async function preparar() {
+      const filas = [];
+      for (const alumno of alumnos) {
+        const cuotas = await listCuotasAlumno(alumno.id);
+        const cuota = cuotas.find(
+          (c) => (numeroElegido === 0 ? c.esSena : !c.esSena && !c.esExtra && c.numero === numeroElegido)
+        );
+        if (cuota) {
+          filas.push({ alumno, cuota });
+        }
+      }
+      if (!cancelado) {
+        filas.sort((a, b) => a.alumno.apellido.localeCompare(b.alumno.apellido));
+        setDatos(filas);
+      }
+    }
+
+    preparar();
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numeroElegido]);
+
+  const label = numeroElegido === 0 ? "Seña" : `Cuota ${numeroElegido}`;
+
+  const pagados = datos?.filter((f) => f.cuota.estado === "pagada") || [];
+  const pendientes = datos?.filter((f) => f.cuota.estado !== "pagada") || [];
+  const totalPendiente = pendientes.reduce((acc, f) => acc + montoConRecargo(f.cuota, colegio), 0);
+
+  function textoExtracto() {
+    const lineasPendientes = pendientes
+      .map((f) => `- ${f.alumno.apellido}, ${f.alumno.nombre}: $${Number(montoConRecargo(f.cuota, colegio)).toLocaleString("es-AR")}`)
+      .join("\n");
+    const lineasPagados = pagados.map((f) => `- ${f.alumno.apellido}, ${f.alumno.nombre}`).join("\n");
+
+    return (
+      `*${colegio.nombre} — ${label}*\n\n` +
+      `✅ Pagaron (${pagados.length}):\n${lineasPagados || "—"}\n\n` +
+      `⏳ Faltan (${pendientes.length}):\n${lineasPendientes || "—"}\n\n` +
+      `Total pendiente: $${totalPendiente.toLocaleString("es-AR")}`
+    );
+  }
+
+  function linkWhatsappExtracto() {
+    const tel = telefono.replace(/\D/g, "");
+    const base = tel ? `https://wa.me/${tel}` : "https://wa.me/";
+    return `${base}?text=${encodeURIComponent(textoExtracto())}`;
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ width: 560, maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h2>Extracto para la delegada — {colegio.nombre}</h2>
+
+        <div className="field">
+          <label>¿De qué querés el extracto?</label>
+          <div className="chip-group">
+            {opciones.map((op) => (
+              <button
+                key={op.numero}
+                type="button"
+                className={`chip ${numeroElegido === op.numero ? "selected" : ""}`}
+                onClick={() => setNumeroElegido(op.numero)}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <label>Teléfono de la delegada</label>
+          <input
+            value={telefono}
+            onChange={(e) => setTelefono(e.target.value)}
+            placeholder="Ej: 3411234567"
+          />
+        </div>
+
+        {numeroElegido !== null && datos === null && (
+          <p style={{ fontSize: 14, color: "var(--slate)" }}>Preparando extracto…</p>
+        )}
+
+        {datos?.length === 0 && (
+          <p style={{ fontSize: 14, color: "var(--slate)" }}>
+            Ningún alumno tiene esa {numeroElegido === 0 ? "seña" : "cuota"} cargada.
+          </p>
+        )}
+
+        {datos?.length > 0 && (
+          <>
+            <div className="card" style={{ padding: 14, marginBottom: 16, fontSize: 13, color: "var(--slate)" }}>
+              <strong style={{ color: "var(--navy)" }}>{pagados.length}</strong> pagaron ·{" "}
+              <strong style={{ color: "var(--rust)" }}>{pendientes.length}</strong> faltan ·{" "}
+              saldo pendiente <strong style={{ color: "var(--navy)" }}>${totalPendiente.toLocaleString("es-AR")}</strong>
+            </div>
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                fontSize: 13,
+                background: "var(--cream)",
+                border: "1px solid var(--line)",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 16,
+                fontFamily: "inherit",
+              }}
+            >
+              {textoExtracto()}
+            </pre>
+          </>
+        )}
+
+        <div className="modal-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+          {datos?.length > 0 && (
+            <a className="btn btn-gold" href={linkWhatsappExtracto()} target="_blank" rel="noreferrer">
+              Enviar por WhatsApp
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EditarColegioModal({ colegio, onClose, onSaved }) {
   const [nombre, setNombre] = useState(colegio.nombre || "");
   const [cantidadCuotas, setCantidadCuotas] = useState(colegio.cantidadCuotas || 1);
@@ -490,6 +643,7 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
   const [fechaPrimerVencimiento, setFechaPrimerVencimiento] = useState(colegio.fechaPrimerVencimiento || "");
   const [frecuenciaDias, setFrecuenciaDias] = useState(colegio.frecuenciaDias || 30);
   const [recargoPorcentaje, setRecargoPorcentaje] = useState(colegio.recargoPorcentaje || "");
+  const [telefonoDelegada, setTelefonoDelegada] = useState(colegio.telefonoDelegada || "");
   const [aplicarAAlumnos, setAplicarAAlumnos] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -510,6 +664,7 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
         fechaPrimerVencimiento,
         frecuenciaDias: Number(frecuenciaDias) || 30,
         recargoPorcentaje: Number(recargoPorcentaje) || 0,
+        telefonoDelegada,
       };
       await actualizarColegio(colegio.id, colegioActualizado);
       if (aplicarAAlumnos) {
@@ -606,6 +761,14 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
               value={recargoPorcentaje}
               onChange={(e) => setRecargoPorcentaje(e.target.value)}
               placeholder="0"
+            />
+          </div>
+          <div className="field">
+            <label>Teléfono de la delegada (opcional)</label>
+            <input
+              value={telefonoDelegada}
+              onChange={(e) => setTelefonoDelegada(e.target.value)}
+              placeholder="Ej: 3411234567"
             />
           </div>
           <p style={{ fontSize: 12, color: "var(--slate)" }}>
