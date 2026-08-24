@@ -689,7 +689,14 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
           nuevoMontoSena,
         });
         if (nuevaCantidadCuotas !== colegio.cantidadCuotas) {
-          await actualizarCantidadCuotasColegio(colegio.id, { ...colegio, ...colegioActualizado });
+          const resultado = await actualizarCantidadCuotasColegio(colegio.id, { ...colegio, ...colegioActualizado });
+          if (resultado.agregadas === 0 && resultado.quitadas === 0) {
+            alert(
+              "No se agregó ni quitó ninguna cuota. Puede ser porque todos los alumnos de este colegio ya tenían esa cantidad, o porque tienen un precio personalizado cargado (esos se saltean a propósito)."
+            );
+          } else {
+            alert(`Listo: se agregaron ${resultado.agregadas} cuota(s) y se quitaron ${resultado.quitadas}.`);
+          }
         }
       }
       onSaved();
