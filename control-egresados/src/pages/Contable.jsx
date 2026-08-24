@@ -225,30 +225,55 @@ export default function Contable() {
               </tr>
             </thead>
             <tbody>
-              {resumen.pagos.slice(0, 50).map((c) => {
-                const alumno = alumnosPorId[c.alumnoId];
-                const colegio = colegiosPorId[c.colegioId];
-                return (
-                  <tr key={c.id}>
-                    <td>{c.fechaPagoISO ? formatFechaAR(c.fechaPagoISO) : "—"}</td>
-                    <td>
-                      {alumno ? (
-                        <Link to={`/colegios/${c.colegioId}/alumnos/${c.alumnoId}`}>
-                          {alumno.apellido}, {alumno.nombre}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td>{colegio?.nombre || "—"}</td>
-                    <td>{c.esExtra ? c.descripcion : c.esSena ? "Seña" : `#${c.numero}`}</td>
-                    <td>${Number(c.monto).toLocaleString("es-AR")}</td>
-                    <td style={{ fontSize: 13, color: "var(--slate)" }}>
-                      {c.metodoPago === "mercadopago" ? "Mercado Pago" : c.metodoPago === "manual" ? "Manual" : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
+              {(() => {
+                const porDia = {};
+                resumen.pagos.slice(0, 200).forEach((c) => {
+                  const fecha = c.fechaPagoISO || "sin-fecha";
+                  if (!porDia[fecha]) porDia[fecha] = [];
+                  porDia[fecha].push(c);
+                });
+                const dias = Object.keys(porDia).sort((a, b) => b.localeCompare(a));
+
+                return dias.map((fecha) => {
+                  const pagosDelDia = porDia[fecha];
+                  const totalDelDia = pagosDelDia.reduce((acc, c) => acc + c.monto, 0);
+                  return (
+                    <>
+                      {pagosDelDia.map((c) => {
+                        const alumno = alumnosPorId[c.alumnoId];
+                        const colegio = colegiosPorId[c.colegioId];
+                        return (
+                          <tr key={c.id}>
+                            <td>{fecha !== "sin-fecha" ? formatFechaAR(fecha) : "—"}</td>
+                            <td>
+                              {alumno ? (
+                                <Link to={`/colegios/${c.colegioId}/alumnos/${c.alumnoId}`}>
+                                  {alumno.apellido}, {alumno.nombre}
+                                </Link>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td>{colegio?.nombre || "—"}</td>
+                            <td>{c.esExtra ? c.descripcion : c.esSena ? "Seña" : `#${c.numero}`}</td>
+                            <td>${Number(c.monto).toLocaleString("es-AR")}</td>
+                            <td style={{ fontSize: 13, color: "var(--slate)" }}>
+                              {c.metodoPago === "mercadopago" ? "Mercado Pago" : c.metodoPago === "manual" ? "Manual" : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      <tr key={`total-${fecha}`} style={{ background: "var(--cream)" }}>
+                        <td colSpan={4} style={{ textAlign: "right", fontWeight: 600 }}>
+                          Total {fecha !== "sin-fecha" ? formatFechaAR(fecha) : ""}:
+                        </td>
+                        <td style={{ fontWeight: 700 }}>${totalDelDia.toLocaleString("es-AR")}</td>
+                        <td></td>
+                      </tr>
+                    </>
+                  );
+                });
+              })()}
             </tbody>
           </table>
         </div>
