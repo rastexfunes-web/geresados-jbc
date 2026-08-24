@@ -67,6 +67,7 @@ export default function Contable() {
     let cobrado = 0;
     let enMora = 0;
     const proximos = [];
+    const pagos = [];
 
     const cuotasFiltradas = colegioFiltro
       ? cuotas.filter((c) => c.colegioId === colegioFiltro)
@@ -94,6 +95,7 @@ export default function Contable() {
         const enPeriodoPorPago = fPago ? dentroDelRango(fPago, desde, hasta) : !hayFiltro;
         if (enPeriodoPorPago) {
           cobrado += c.monto;
+          pagos.push({ ...c, fechaPagoISO: fPago });
         }
       }
 
@@ -109,6 +111,7 @@ export default function Contable() {
     });
 
     proximos.sort((a, b) => a.fechaVencimiento.localeCompare(b.fechaVencimiento));
+    pagos.sort((a, b) => (b.fechaPagoISO || "").localeCompare(a.fechaPagoISO || ""));
 
     return {
       facturado,
@@ -116,6 +119,7 @@ export default function Contable() {
       enMora,
       saldoPendiente: facturado - cobrado,
       proximos: proximos.slice(0, 30),
+      pagos,
     };
   }, [cuotas, colegiosPorId, desde, hasta, hayFiltro, colegioFiltro]);
 
@@ -150,6 +154,16 @@ export default function Contable() {
           <label>Hasta</label>
           <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
         </div>
+        <button
+          className="btn btn-outline btn-sm"
+          onClick={() => {
+            const hoy = new Date().toISOString().slice(0, 10);
+            setDesde(hoy);
+            setHasta(hoy);
+          }}
+        >
+          Hoy
+        </button>
         {(hayFiltro || colegioFiltro) && (
           <button className="btn btn-ghost btn-sm" onClick={() => { setDesde(""); setHasta(""); setColegioFiltro(""); }}>
             Ver todo el historial
@@ -185,6 +199,60 @@ export default function Contable() {
           </div>
         </div>
       </div>
+
+      <h2 style={{ fontSize: 18, marginBottom: 12 }}>
+        {hayFiltro ? "Pagos en el período" : "Pagos recientes"}
+      </h2>
+
+      {resumen.pagos.length === 0 && (
+        <div className="card empty">
+          <h3>No hay pagos para mostrar</h3>
+          <p>Nadie pagó todavía en el rango seleccionado{colegioFiltro ? " para este colegio" : ""}.</p>
+        </div>
+      )}
+
+      {resumen.pagos.length > 0 && (
+        <div className="card" style={{ marginBottom: 28 }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Fecha de pago</th>
+                <th>Alumno</th>
+                <th>Colegio</th>
+                <th>Cuota</th>
+                <th>Monto</th>
+                <th>Método</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumen.pagos.slice(0, 50).map((c) => {
+                const alumno = alumnosPorId[c.alumnoId];
+                const colegio = colegiosPorId[c.colegioId];
+                return (
+                  <tr key={c.id}>
+                    <td>{c.fechaPagoISO ? formatFechaAR(c.fechaPagoISO) : "—"}</td>
+                    <td>
+                      {alumno ? (
+                        <Link to={`/colegios/${c.colegioId}/alumnos/${c.alumnoId}`}>
+                          {alumno.apellido}, {alumno.nombre}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>{colegio?.nombre || "—"}</td>
+                    <td>{c.esExtra ? c.descripcion : c.esSena ? "Seña" : `#${c.numero}`}</td>
+                    <td>${Number(c.monto).toLocaleString("es-AR")}</td>
+                    <td style={{ fontSize: 13, color: "var(--slate)" }}>
+                      {c.metodoPago === "mercadopago" ? "Mercado Pago" : c.metodoPago === "manual" ? "Manual" : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <h2 style={{ fontSize: 18, marginBottom: 12 }}>
         {hayFiltro ? "Vencimientos en el período" : "Próximos vencimientos"}
