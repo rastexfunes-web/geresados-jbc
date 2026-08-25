@@ -90,8 +90,12 @@ export async function actualizarCuotasPendientesColegio(colegioId, { nuevoMontoC
     const base = c.esSena ? nuevoMontoSena : nuevoMontoCuota;
     if (base === undefined || base === null || Number.isNaN(base)) return;
     const extra = extraAgregadoPorCuota[d.id] || 0;
+    const nuevoMonto = Math.round((base + extra) * 100) / 100;
+    // Si el monto no cambió de verdad, no tocamos el cupón ya generado
+    // (para no invalidar links que ya se mandaron sin necesidad).
+    if (nuevoMonto === c.monto) return;
     batch.update(doc(db, "cuotas", d.id), {
-      monto: Math.round((base + extra) * 100) / 100,
+      monto: nuevoMonto,
       mpPreferenceId: null,
       mpInitPoint: null,
     });
