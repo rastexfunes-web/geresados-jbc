@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Payment } from "mercadopago";
+import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
@@ -66,11 +66,37 @@ export default async function handler(req, res) {
 
     if (payment.status === "approved") {
       const db = getDb();
-      await db.collection("cuotas").doc(cuotaId).update({
+      const cuotaRef = db.collection("cuotas").doc(cuotaId);
+      const cuotaSnap = await cuotaRef.get();
+
+      await cuotaRef.update({
         estado: "pagada",
         metodoPago: "mercadopago",
         fechaPago: FieldValue.serverTimestamp(),
       });
+
+      // Vencemos el link de pago para que no se pueda volver a usar y
+      // cobrar dos veces por error (por ejemplo si el alumno lo reabre
+      // desde el chat de WhatsApp después de haber pagado).
+      const preferenceId = cuotaSnap.exists ? cuotaSnap.data().mpPreferenceId : null;
+      if (preferenceId) {
+        try {
+          const preferenceClient = new Preference(client);
+          const ahora = new Date().toISOString();
+          await preferenceClient.update({
+            id: preferenceId,
+            body: {
+              expires: true,
+              expiration_date_from: ahora,
+              expiration_date_to: ahora,
+            },
+          });
+        } catch (err) {
+          // Si falla el vencimiento del link no rompemos el webhook: la
+          // cuota ya quedó marcada como pagada, que es lo importante.
+          console.error("No se pudo vencer la preference de MP:", err);
+        }
+      }
     }
 
     res.status(200).send("ok");
