@@ -684,22 +684,29 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
       };
       await actualizarColegio(colegio.id, colegioActualizado);
       if (aplicarAAlumnos) {
-        await actualizarCuotasPendientesColegio(colegio.id, {
+        const resultadoMonto = await actualizarCuotasPendientesColegio(colegio.id, {
           nuevoMontoCuota,
           nuevoMontoSena,
         });
+        let resultadoCantidad = { agregadas: 0, quitadas: 0 };
         if (nuevaCantidadCuotas !== colegio.cantidadCuotas) {
-          const resultado = await actualizarCantidadCuotasColegio(colegio.id, { ...colegio, ...colegioActualizado });
-          if (resultado.agregadas === 0 && resultado.quitadas === 0) {
-            alert(
-              "No se agregó ni quitó ninguna cuota. Puede ser porque todos los alumnos de este colegio ya tenían esa cantidad, o porque tienen un precio personalizado cargado (esos se saltean a propósito)."
-            );
-          } else {
-            alert(`Listo: se agregaron ${resultado.agregadas} cuota(s) y se quitaron ${resultado.quitadas}.`);
-          }
+          resultadoCantidad = await actualizarCantidadCuotasColegio(colegio.id, { ...colegio, ...colegioActualizado });
         }
+        const partes = [
+          `${resultadoMonto.actualizadas} cuota(s) con el monto actualizado`,
+          `${resultadoCantidad.agregadas} agregada(s)`,
+          `${resultadoCantidad.quitadas} quitada(s)`,
+        ];
+        let mensaje = `Listo: ${partes.join(", ")}.`;
+        if (resultadoMonto.personalizados > 0) {
+          mensaje += ` (${resultadoMonto.personalizados} alumno(s) con precio personalizado no se tocaron.)`;
+        }
+        alert(mensaje);
       }
       onSaved();
+    } catch (err) {
+      console.error(err);
+      alert(`Ocurrió un error al guardar: ${err.message || err}`);
     } finally {
       setSaving(false);
     }

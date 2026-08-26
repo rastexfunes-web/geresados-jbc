@@ -83,6 +83,7 @@ export async function actualizarCuotasPendientesColegio(colegioId, { nuevoMontoC
 
   const cuotasSnap = await getDocs(query(collection(db, "cuotas"), where("colegioId", "==", colegioId)));
   const batch = writeBatch(db);
+  let actualizadas = 0;
   cuotasSnap.forEach((d) => {
     const c = d.data();
     if (c.estado === "pagada" || c.esExtra) return;
@@ -99,8 +100,10 @@ export async function actualizarCuotasPendientesColegio(colegioId, { nuevoMontoC
       mpPreferenceId: null,
       mpInitPoint: null,
     });
+    actualizadas++;
   });
   await batch.commit();
+  return { actualizadas, personalizados: idsConPrecioPersonalizado.size };
 }
 
 // Ajusta la CANTIDAD de cuotas de los alumnos ya cargados de un colegio a
