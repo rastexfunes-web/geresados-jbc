@@ -688,10 +688,11 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
           nuevoMontoCuota,
           nuevoMontoSena,
         });
-        let resultadoCantidad = { agregadas: 0, quitadas: 0 };
-        if (nuevaCantidadCuotas !== colegio.cantidadCuotas) {
-          resultadoCantidad = await actualizarCantidadCuotasColegio(colegio.id, { ...colegio, ...colegioActualizado });
-        }
+        // Siempre revisamos la cantidad de cuotas de cada alumno contra la
+        // nueva configuración (no solo cuando cambia el número del colegio),
+        // porque puede haber quedado desactualizada de un guardado anterior
+        // sin este check tildado.
+        const resultadoCantidad = await actualizarCantidadCuotasColegio(colegio.id, { ...colegio, ...colegioActualizado });
         const partes = [
           `${resultadoMonto.actualizadas} cuota(s) con el monto actualizado`,
           `${resultadoCantidad.agregadas} agregada(s)`,
