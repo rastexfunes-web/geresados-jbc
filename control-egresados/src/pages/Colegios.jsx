@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { listColegios, crearColegio, eliminarColegio } from "../data";
+import { listColegios, crearColegio, eliminarColegio, listTodosLosAlumnos } from "../data";
 
 export default function Colegios() {
   const [colegios, setColegios] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [todosLosAlumnos, setTodosLosAlumnos] = useState(null);
 
   async function refresh() {
     setColegios(await listColegios());
@@ -13,6 +15,23 @@ export default function Colegios() {
   useEffect(() => {
     refresh();
   }, []);
+
+  async function handleBuscarFocus() {
+    if (todosLosAlumnos === null) {
+      setTodosLosAlumnos(await listTodosLosAlumnos());
+    }
+  }
+
+  const colegiosPorId = {};
+  colegios?.forEach((c) => (colegiosPorId[c.id] = c));
+
+  const query = busqueda.trim().toLowerCase();
+  const resultados =
+    query.length >= 2 && todosLosAlumnos
+      ? todosLosAlumnos
+          .filter((a) => `${a.nombre} ${a.apellido}`.toLowerCase().includes(query))
+          .slice(0, 15)
+      : [];
 
   return (
     <div>
@@ -24,6 +43,63 @@ export default function Colegios() {
         <button className="btn btn-gold" onClick={() => setShowModal(true)}>
           + Nuevo colegio
         </button>
+      </div>
+
+      <div style={{ position: "relative", marginBottom: 24 }}>
+        <input
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          onFocus={handleBuscarFocus}
+          placeholder="Buscar alumno por nombre o apellido…"
+          style={{
+            width: "100%",
+            border: "1px solid var(--line)",
+            borderRadius: 10,
+            padding: "12px 16px",
+            fontSize: 14,
+            background: "var(--paper)",
+          }}
+        />
+        {query.length >= 2 && (
+          <div
+            className="card"
+            style={{
+              position: "absolute",
+              top: "calc(100% + 6px)",
+              left: 0,
+              right: 0,
+              zIndex: 20,
+              maxHeight: 320,
+              overflowY: "auto",
+            }}
+          >
+            {todosLosAlumnos === null && (
+              <div style={{ padding: 14, fontSize: 13, color: "var(--slate)" }}>Buscando…</div>
+            )}
+            {todosLosAlumnos && resultados.length === 0 && (
+              <div style={{ padding: 14, fontSize: 13, color: "var(--slate)" }}>Sin resultados.</div>
+            )}
+            {resultados.map((a) => (
+              <Link
+                key={a.id}
+                to={`/colegios/${a.colegioId}/alumnos/${a.id}`}
+                onClick={() => setBusqueda("")}
+                style={{
+                  display: "block",
+                  padding: "10px 16px",
+                  borderBottom: "1px solid var(--line)",
+                  textDecoration: "none",
+                  color: "var(--navy)",
+                }}
+              >
+                <strong>{a.apellido}, {a.nombre}</strong>
+                <div style={{ fontSize: 12, color: "var(--slate)" }}>
+                  {colegiosPorId[a.colegioId]?.nombre || "Colegio no encontrado"}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {colegios === null && <div className="empty">Cargando…</div>}
