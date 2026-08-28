@@ -5,6 +5,7 @@ import Layout from "./Layout";
 import Login from "./pages/Login";
 import PagoRealizado from "./pages/PagoRealizado";
 import PedidoExtra from "./pages/PedidoExtra";
+import Portal from "./pages/Portal";
 import Colegios from "./pages/Colegios";
 import ColegioDetail from "./pages/ColegioDetail";
 import AlumnoDetail from "./pages/AlumnoDetail";
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/pago-realizado" element={<PagoRealizado />} />
           <Route path="/colegios/:colegioId/alumnos/:alumnoId/extra" element={<PedidoExtra />} />
+          <Route path="/portal" element={<Portal />} />
           <Route
             path="/"
             element={
