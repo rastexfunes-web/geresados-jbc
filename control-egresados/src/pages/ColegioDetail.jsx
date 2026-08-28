@@ -24,6 +24,8 @@ export default function ColegioDetail() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
   const [showWhatsappModal, setShowWhatsappModal] = useState(false);
+  const [showConfirmacionApiModal, setShowConfirmacionApiModal] = useState(false);
+  const [showCuponeraApiModal, setShowCuponeraApiModal] = useState(false);
   const [showExtractoModal, setShowExtractoModal] = useState(false);
 
   async function refresh() {
@@ -202,6 +204,12 @@ export default function ColegioDetail() {
           <button className="btn btn-outline" onClick={() => setShowWhatsappModal(true)} disabled={!alumnos?.length}>
             Enviar cuotas por WhatsApp
           </button>
+          <button className="btn btn-outline" onClick={() => setShowConfirmacionApiModal(true)} disabled={!alumnos?.length}>
+            Confirmar contacto (todo el curso)
+          </button>
+          <button className="btn btn-outline" onClick={() => setShowCuponeraApiModal(true)} disabled={!alumnos?.length}>
+            Enviar cupones (todo el curso)
+          </button>
           <button className="btn btn-outline" onClick={() => setShowExtractoModal(true)} disabled={!alumnos?.length}>
             Extracto para delegada
           </button>
@@ -330,6 +338,18 @@ export default function ColegioDetail() {
         <EnviarWhatsappModal colegio={colegio} alumnos={alumnos} onClose={() => setShowWhatsappModal(false)} />
       )}
 
+      {showConfirmacionApiModal && (
+        <ConfirmacionContactoApiModal
+          colegio={colegio}
+          alumnos={alumnos}
+          onClose={() => setShowConfirmacionApiModal(false)}
+        />
+      )}
+
+      {showCuponeraApiModal && (
+        <CuponeraApiModal colegio={colegio} alumnos={alumnos} onClose={() => setShowCuponeraApiModal(false)} />
+      )}
+
       {showExtractoModal && (
         <ExtractoDelegadaModal colegio={colegio} alumnos={alumnos} onClose={() => setShowExtractoModal(false)} />
       )}
@@ -340,6 +360,230 @@ export default function ColegioDetail() {
 function formatFecha(fechaISO) {
   const [y, m, d] = fechaISO.split("-");
   return `${d}/${m}/${y}`;
+}
+
+async function enviarWhatsappApi(telefono, tipo, parametros) {
+  const resp = await fetch("/api/enviar-whatsapp-template", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telefono, tipo, parametros }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    throw new Error(data.error || "Error al enviar");
+  }
+  return data;
+}
+
+function ConfirmacionContactoApiModal({ colegio, alumnos, onClose }) {
+  const [enviando, setEnviando] = useState(false);
+  const [resultados, setResultados] = useState(null);
+
+  const conTelefono = alumnos.filter((a) => a.telefono);
+  const sinTelefono = alumnos.filter((a) => !a.telefono);
+
+  async function handleEnviar() {
+    setEnviando(true);
+    const nuevosResultados = [];
+    for (const alumno of conTelefono) {
+      try {
+        await enviarWhatsappApi(alumno.telefono, "confirmacion", [alumno.nombre]);
+        nuevosResultados.push({ alumno, ok: true });
+      } catch (err) {
+        nuevosResultados.push({ alumno, ok: false, error: err.message });
+      }
+      setResultados([...nuevosResultados]);
+    }
+    setEnviando(false);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ width: 520, maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h2>Confirmar contacto — {colegio.nombre}</h2>
+        <p style={{ fontSize: 13, color: "var(--slate)" }}>
+          Se manda la plantilla de confirmación de contacto a los {conTelefono.length} alumno{conTelefono.length !== 1 ? "s" : ""} con teléfono cargado.
+        </p>
+        {sinTelefono.length > 0 && (
+          <p style={{ fontSize: 12, color: "var(--rust)" }}>
+            {sinTelefono.length} alumno(s) sin teléfono cargado no van a recibir nada: {sinTelefono.map((a) => `${a.apellido}, ${a.nombre}`).join(" · ")}
+          </p>
+        )}
+
+        {resultados && (
+          <div className="card" style={{ padding: 10, marginBottom: 12, maxHeight: 200, overflowY: "auto" }}>
+            {resultados.map((r, i) => (
+              <div key={i} style={{ fontSize: 13, color: r.ok ? "var(--green)" : "var(--rust)" }}>
+                {r.ok ? "✓" : "✗"} {r.alumno.apellido}, {r.alumno.nombre} {r.error ? `— ${r.error}` : ""}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="modal-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+          <button
+            type="button"
+            className="btn btn-gold"
+            onClick={handleEnviar}
+            disabled={enviando || conTelefono.length === 0}
+          >
+            {enviando ? `Enviando… (${resultados?.length || 0}/${conTelefono.length})` : "Enviar a todo el curso"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CuponeraApiModal({ colegio, alumnos, onClose }) {
+  const [numeroElegido, setNumeroElegido] = useState(null);
+  const [items, setItems] = useState(null);
+  const [progreso, setProgreso] = useState(0);
+  const [enviando, setEnviando] = useState(false);
+  const [resultados, setResultados] = useState(null);
+
+  const opciones = [
+    { numero: 0, label: "Seña" },
+    ...Array.from({ length: colegio.cantidadCuotas }, (_, i) => ({
+      numero: i + 1,
+      label: `Cuota ${i + 1}`,
+    })),
+  ];
+
+  useEffect(() => {
+    if (numeroElegido === null) return;
+    let cancelado = false;
+    setItems(null);
+    setProgreso(0);
+    setResultados(null);
+
+    async function preparar() {
+      const pendientes = [];
+      for (const alumno of alumnos) {
+        if (!alumno.telefono) continue;
+        const cuotas = await listCuotasAlumno(alumno.id);
+        const cuota = cuotas.find(
+          (c) => (numeroElegido === 0 ? c.esSena : !c.esSena && !c.esExtra && c.numero === numeroElegido)
+        );
+        if (cuota && cuota.estado !== "pagada") {
+          pendientes.push({ alumno, cuota });
+        }
+      }
+      if (cancelado) return;
+
+      for (let i = 0; i < pendientes.length; i++) {
+        const { alumno, cuota } = pendientes[i];
+        if (!cuota.mpInitPoint) {
+          try {
+            const link = await generarCuponCuota(cuota, alumno, colegio);
+            cuota.mpInitPoint = link;
+          } catch {
+            // sigue sin link; el envío por API va a fallar para este caso puntual
+          }
+        }
+        if (cancelado) return;
+        setProgreso(i + 1);
+      }
+      if (!cancelado) setItems(pendientes);
+    }
+
+    preparar();
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numeroElegido]);
+
+  const label = numeroElegido === 0 ? "Seña" : `Cuota ${numeroElegido}`;
+
+  async function handleEnviarTodos() {
+    setEnviando(true);
+    const nuevosResultados = [];
+    for (const { alumno, cuota } of items) {
+      try {
+        if (!cuota.mpInitPoint) throw new Error("sin cupón generado");
+        const detalle = cuota.esSena ? "Seña" : `Cuota ${cuota.numero}`;
+        await enviarWhatsappApi(alumno.telefono, "cuponera", [
+          alumno.nombre,
+          detalle,
+          colegio.nombre,
+          cuota.mpInitPoint,
+        ]);
+        nuevosResultados.push({ alumno, ok: true });
+      } catch (err) {
+        nuevosResultados.push({ alumno, ok: false, error: err.message });
+      }
+      setResultados([...nuevosResultados]);
+    }
+    setEnviando(false);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ width: 560, maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h2>Enviar cupones (todo el curso) — {colegio.nombre}</h2>
+
+        <div className="field">
+          <label>¿Qué querés enviar?</label>
+          <div className="chip-group">
+            {opciones.map((op) => (
+              <button
+                key={op.numero}
+                type="button"
+                className={`chip ${numeroElegido === op.numero ? "selected" : ""}`}
+                onClick={() => setNumeroElegido(op.numero)}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {numeroElegido !== null && items === null && (
+          <p style={{ fontSize: 14, color: "var(--slate)" }}>
+            Preparando cupones… {progreso} / {alumnos.length}
+          </p>
+        )}
+
+        {items?.length === 0 && (
+          <p style={{ fontSize: 14, color: "var(--slate)" }}>
+            Nadie tiene esa {numeroElegido === 0 ? "seña" : "cuota"} pendiente (o no tienen teléfono cargado).
+          </p>
+        )}
+
+        {items?.length > 0 && !resultados && (
+          <p style={{ fontSize: 13, color: "var(--slate)" }}>
+            {items.length} alumno{items.length !== 1 ? "s" : ""} listo{items.length !== 1 ? "s" : ""} para recibir {label.toLowerCase()} por WhatsApp.
+          </p>
+        )}
+
+        {resultados && (
+          <div className="card" style={{ padding: 10, marginBottom: 12, maxHeight: 220, overflowY: "auto" }}>
+            {resultados.map((r, i) => (
+              <div key={i} style={{ fontSize: 13, color: r.ok ? "var(--green)" : "var(--rust)" }}>
+                {r.ok ? "✓" : "✗"} {r.alumno.apellido}, {r.alumno.nombre} {r.error ? `— ${r.error}` : ""}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="modal-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+          {items?.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-gold"
+              onClick={handleEnviarTodos}
+              disabled={enviando}
+            >
+              {enviando ? `Enviando… (${resultados?.length || 0}/${items.length})` : "Enviar a todo el curso"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function EnviarWhatsappModal({ colegio, alumnos, onClose }) {
