@@ -2,13 +2,12 @@ import { useState } from "react";
 
 export default function Portal() {
   const [busqueda, setBusqueda] = useState("");
-  const [dniUsado, setDniUsado] = useState("");
   const [resultados, setResultados] = useState(null);
   const [error, setError] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [pagando, setPagando] = useState(null);
 
-  // Si escribió solo números, buscamos por DNI. Si no, por nombre y apellido.
+  // Si escribió solo números, buscamos por DNI o teléfono. Si no, por nombre y apellido.
   const esSoloNumeros = /^\d+$/.test(busqueda.trim());
 
   async function handleBuscar(e) {
@@ -24,7 +23,6 @@ export default function Portal() {
       const resp = await fetch(url);
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "No encontramos resultados");
-      setDniUsado(esSoloNumeros ? valor : "");
       setResultados(data.resultados);
     } catch (err) {
       setError(err.message);
@@ -40,7 +38,7 @@ export default function Portal() {
       const resp = await fetch("/api/portal-alumno", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dni: dniUsado, alumnoId, cuotaId }),
+        body: JSON.stringify({ alumnoId, cuotaId }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "No se pudo generar el link");
@@ -57,16 +55,16 @@ export default function Portal() {
         <div className="mark">
           <span className="seal" /> Egresados
         </div>
-        <div className="sub">Consultá y pagá tus cuotas con tu DNI o tu nombre</div>
+        <div className="sub">Consultá y pagá tus cuotas con tu DNI, tu celular o tu nombre</div>
 
         {!resultados && (
           <form onSubmit={handleBuscar}>
             <div className="field">
-              <label>DNI o nombre y apellido</label>
+              <label>DNI, celular o nombre y apellido</label>
               <input
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Ej: 30123456 o Juan Pérez"
+                placeholder="Ej: 30123456, 3411234567 o Juan Pérez"
                 required
                 autoFocus
               />

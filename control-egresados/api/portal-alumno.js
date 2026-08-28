@@ -32,22 +32,39 @@ export default async function handler(req, res) {
   try {
     const db = getDb();
 
-    // GET: busca alumnos por DNI (si lo tiene cargado) o por nombre/apellido
-    // como respaldo para los que todavía no tienen DNI en el sistema.
+    // GET: busca alumnos por DNI, por teléfono, o por nombre/apellido como
+    // respaldo para los que todavía no tienen esos datos cargados.
     if (req.method === "GET") {
       const dni = String(req.query.dni || "").trim();
       const q = String(req.query.q || "").trim().toLowerCase();
 
       if (!dni && !q) {
-        res.status(400).json({ error: "Ingresá un DNI o un nombre" });
+        res.status(400).json({ error: "Ingresá un DNI, un teléfono o un nombre" });
         return;
       }
 
       let alumnosDocs = [];
 
       if (dni) {
-        const alumnosSnap = await db.collection("alumnos").where("dni", "==", dni).get();
-        alumnosDocs = alumnosSnap.docs;
+        // Cuando escriben solo números no sabemos si es un DNI o un
+        // celular, así que probamos las dos cosas y juntamos lo que
+        // encontremos.
+        const dniSnap = await db.collection("alumnos").where("dni", "==", dni).get();
+        const porDni = dniSnap.docs;
+
+        const soloDigitos = dni.replace(/\D/g, "");
+        const todosSnap = await db.collection("alumnos").get();
+        const porTelefono = todosSnap.docs.filter((d) => {
+          const telefono = (d.data().telefono || "").replace(/\D/g, "");
+          return telefono.length > 0 && soloDigitos.length >= 6 && telefono.includes(soloDigitos);
+        });
+
+        const vistos = new Set();
+        alumnosDocs = [...porDni, ...porTelefono].filter((d) => {
+          if (vistos.has(d.id)) return false;
+          vistos.add(d.id);
+          return true;
+        });
       } else {
         // No hay búsqueda de texto parcial en Firestore, así que traemos
         // todos los alumnos y filtramos acá (la cantidad es chica).
@@ -61,7 +78,9 @@ export default async function handler(req, res) {
 
       if (alumnosDocs.length === 0) {
         res.status(404).json({
-          error: dni ? "No encontramos ningún alumno con ese DNI" : "No encontramos ningún alumno con ese nombre",
+          error: dni
+            ? "No encontramos ningún alumno con ese DNI o teléfono"
+            : "No encontramos ningún alumno con ese nombre",
         });
         return;
       }
@@ -106,12 +125,11 @@ export default async function handler(req, res) {
       return;
     }
 
-    // POST: genera (o reutiliza) el cupón de pago de una cuota puntual. Si
-    // el alumno tiene DNI cargado, lo verificamos contra lo que mandó el
-    // front; si no tiene (porque llegó por búsqueda de nombre), solo
-    // confirmamos que la cuota sea realmente de ese alumno.
+    // POST: genera (o reutiliza) el cupón de pago de una cuota puntual.
+    // Solo validamos que la cuota sea realmente de ese alumno (el alumnoId
+    // ya salió de una búsqueda legítima por DNI, teléfono o nombre).
     if (req.method === "POST") {
-      const { dni, alumnoId, cuotaId } = req.body;
+      const { alumnoId, cuotaId } = req.body;
       if (!alumnoId || !cuotaId) {
         res.status(400).json({ error: "Faltan datos" });
         return;
@@ -120,11 +138,6 @@ export default async function handler(req, res) {
       const alumnoSnap = await db.collection("alumnos").doc(alumnoId).get();
       if (!alumnoSnap.exists) {
         res.status(404).json({ error: "Alumno no encontrado" });
-        return;
-      }
-      const alumnoDni = String(alumnoSnap.data().dni || "").trim();
-      if (alumnoDni && alumnoDni !== String(dni || "").trim()) {
-        res.status(403).json({ error: "No coincide el DNI con este alumno" });
         return;
       }
       const alumno = alumnoSnap.data();
