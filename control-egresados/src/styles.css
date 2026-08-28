@@ -550,7 +550,8 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--navy);
+  background: var(--navy) url('/fondo-login.jpg') center / cover no-repeat;
+  padding: 20px;
 }
 
 .login-card {
@@ -559,6 +560,7 @@ button {
   border-radius: 14px;
   width: 360px;
   max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
 }
 
 .login-card .mark {
