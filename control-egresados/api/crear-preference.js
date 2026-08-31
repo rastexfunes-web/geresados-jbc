@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     // Usamos siempre la URL fija de producción, para que el link de vuelta y
     // el webhook nunca terminen apuntando a una URL de preview de Vercel
     // (esas piden loguearse con una cuenta de Vercel para verlas).
-    const appUrl = "https://jjbc-egresados.vercel.app";
+    const appUrl = "https://jbc-egresados.com.ar";
     const backUrl = `${appUrl}/pago-realizado`;
 
     const result = await preference.create({
