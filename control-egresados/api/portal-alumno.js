@@ -14,7 +14,7 @@ function getDb() {
   return getFirestore();
 }
 
-const APP_URL = "https://geresados-jbc.vercel.app";
+const APP_URL = "https://jjbc-egresados.vercel.app";
 
 function esCuotaVencida(cuota) {
   if (cuota.estado === "pagada" || !cuota.fechaVencimiento) return false;

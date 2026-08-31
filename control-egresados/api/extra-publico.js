@@ -14,7 +14,7 @@ function getDb() {
   return getFirestore();
 }
 
-const APP_URL = "https://geresados-jbc.vercel.app";
+const APP_URL = "https://jjbc-egresados.vercel.app";
 
 export default async function handler(req, res) {
   try {

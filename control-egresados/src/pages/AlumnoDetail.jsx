@@ -88,7 +88,7 @@ export default function AlumnoDetail() {
   }
 
   function linkWhatsappPedidoExtra() {
-    const url = `https://geresados-jbc.vercel.app/colegios/${colegio.id}/alumnos/${alumno.id}/extra`;
+    const url = `https://jjbc-egresados.vercel.app/colegios/${colegio.id}/alumnos/${alumno.id}/extra`;
     const mensaje = `Hola ${alumno.nombre}! Si querés agregar algo extra a tu pedido de ${colegio.nombre} (por ejemplo otra remera), entrá acá y lo cargás vos mismo: ${url}`;
     const telefono = (alumno.telefono || "").replace(/\D/g, "");
     const base = telefono ? `https://wa.me/${telefono}` : "https://wa.me/";
