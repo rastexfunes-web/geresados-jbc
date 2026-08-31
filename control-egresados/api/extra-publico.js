@@ -14,7 +14,7 @@ function getDb() {
   return getFirestore();
 }
 
-const APP_URL = "https://jbc-egresados.com.ar";
+const APP_URL = "https://www.jbc-egresados.com.ar";
 
 export default async function handler(req, res) {
   try {

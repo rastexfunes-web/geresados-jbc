@@ -14,7 +14,7 @@ function getDb() {
   return getFirestore();
 }
 
-const APP_URL = "https://jbc-egresados.com.ar";
+const APP_URL = "https://www.jbc-egresados.com.ar";
 
 function esCuotaVencida(cuota) {
   if (cuota.estado === "pagada" || !cuota.fechaVencimiento) return false;
