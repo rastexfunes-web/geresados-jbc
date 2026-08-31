@@ -58,7 +58,7 @@ export default function Portal() {
   return (
     <div className="login-screen portal-screen">
       <div className="login-card" style={{ width: 460 }}>
-        <img src="/fondo-login.jpg" alt="JBC Egresados" className="portal-logo" />
+        <h1 className="portal-titulo">Bienvenidos al portal de pagos de JBC Egresados</h1>
         {!resultados && (
           <form onSubmit={handleBuscar}>
             <div className="field">
