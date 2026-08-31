@@ -58,9 +58,6 @@ export default function Portal() {
   return (
     <div className="login-screen">
       <div className="login-card" style={{ width: 460 }}>
-        <div className="mark">
-          <span className="seal" /> Egresados
-        </div>
         <div className="sub">Consultá y pagá tus cuotas con tu DNI, tu celular o tu nombre</div>
 
         {!resultados && (
