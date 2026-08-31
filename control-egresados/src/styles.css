@@ -738,10 +738,11 @@ button {
 .portal-input-wrap {
   display: flex;
   align-items: stretch;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  min-height: 64px;
 }
 
 .portal-input-icon {
@@ -750,16 +751,21 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
+  width: 64px;
   flex-shrink: 0;
+}
+
+.portal-input-icon svg {
+  width: 28px;
+  height: 28px;
 }
 
 .portal-input-wrap input {
   border: none;
   border-radius: 0;
   flex: 1;
-  padding: 0 14px;
-  font-size: 15px;
+  padding: 0 16px;
+  font-size: 18px;
 }
 
 .portal-input-wrap input:focus { outline: none; }
@@ -769,17 +775,22 @@ button {
   background: var(--navy);
   color: #fff;
   border: none;
-  border-radius: 10px;
-  padding: 14px;
+  border-radius: 12px;
+  padding: 18px;
   font-family: 'Oswald', sans-serif;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 19px;
   letter-spacing: 0.04em;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 16px;
+}
+
+.portal-btn-buscar svg {
+  width: 24px;
+  height: 24px;
 }
 
 .portal-btn-buscar:disabled { opacity: 0.6; }
