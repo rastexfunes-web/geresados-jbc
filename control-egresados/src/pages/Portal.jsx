@@ -96,7 +96,17 @@ export default function Portal() {
                   {alumno.apellido}, {alumno.nombre}
                   {alumno.apodo && <span style={{ color: "var(--slate)" }}> "{alumno.apodo}"</span>}
                 </h3>
-                <div style={{ fontSize: 12, color: "var(--slate)", marginBottom: 8 }}>{colegio?.nombre}</div>
+                <div style={{ fontSize: 12, color: "var(--slate)" }}>{colegio?.nombre}</div>
+                {(alumno.prendaSuperior || alumno.prendaAbrigo || alumno.extrasResumen?.length > 0) && (
+                  <div style={{ fontSize: 12, color: "var(--gold)", marginBottom: 8 }}>
+                    {[alumno.prendaSuperior, alumno.prendaAbrigo, ...(alumno.extrasResumen || [])]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                )}
+                {!(alumno.prendaSuperior || alumno.prendaAbrigo || alumno.extrasResumen?.length > 0) && (
+                  <div style={{ marginBottom: 8 }} />
+                )}
 
                 {cuotas.map((c) => {
                   const label = c.esExtra ? c.descripcion : c.esSena ? "Seña" : `Cuota ${c.numero}`;

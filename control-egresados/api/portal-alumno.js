@@ -127,8 +127,26 @@ export default async function handler(req, res) {
             extrasIncluidos: extrasPorCuota[c.id] || [],
           }));
 
+        // Resumen de todos los extras del alumno (los repartidos entre
+        // cuotas + los que quedaron como cobro aparte), para mostrar debajo
+        // de su nombre en el portal.
+        const nombresExtrasRepartidos = (alumno.extras || []).map((ex) => ex.descripcion);
+        const nombresExtrasAparte = cuotasSnap.docs
+          .map((d) => d.data())
+          .filter((c) => c.esExtra)
+          .map((c) => c.descripcion);
+        const extrasResumen = [...nombresExtrasRepartidos, ...nombresExtrasAparte];
+
         resultados.push({
-          alumno: { id: alumno.id, nombre: alumno.nombre, apellido: alumno.apellido, apodo: alumno.apodo || "" },
+          alumno: {
+            id: alumno.id,
+            nombre: alumno.nombre,
+            apellido: alumno.apellido,
+            apodo: alumno.apodo || "",
+            prendaSuperior: alumno.prendaSuperior || "",
+            prendaAbrigo: alumno.prendaAbrigo || "",
+            extrasResumen,
+          },
           colegio: colegio ? { id: colegio.id, nombre: colegio.nombre } : null,
           cuotas,
         });
