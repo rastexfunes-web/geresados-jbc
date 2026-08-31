@@ -119,6 +119,14 @@ export default function Portal() {
                           {c.fechaVencimiento && ` · vence ${formatFecha(c.fechaVencimiento)}`}
                           {c.vencida && <span style={{ color: "var(--rust)" }}> · vencida</span>}
                         </div>
+                        {c.extrasIncluidos?.length > 0 && (
+                          <div style={{ fontSize: 11, color: "var(--gold)" }}>
+                            Incluye:{" "}
+                            {c.extrasIncluidos
+                              .map((ex) => `${ex.descripcion} (+$${Number(ex.monto).toLocaleString("es-AR")})`)
+                              .join(", ")}
+                          </div>
+                        )}
                       </div>
                       {c.estado === "pagada" ? (
                         <span className="badge badge-green">Pagada</span>

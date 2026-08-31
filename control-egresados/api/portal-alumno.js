@@ -98,6 +98,18 @@ export default async function handler(req, res) {
           .collection("cuotas")
           .where("alumnoId", "==", alumno.id)
           .get();
+
+        // Un extra repartido no aparece como cuota propia: queda sumado
+        // dentro del monto de las cuotas que afectó. Armamos un mapa para
+        // poder avisar en cada cuota si tiene alguno incluido.
+        const extrasPorCuota = {};
+        (alumno.extras || []).forEach((ex) => {
+          (ex.cuotasAfectadas || []).forEach((ca) => {
+            if (!extrasPorCuota[ca.id]) extrasPorCuota[ca.id] = [];
+            extrasPorCuota[ca.id].push({ descripcion: ex.descripcion, monto: ca.montoAgregado });
+          });
+        });
+
         const cuotas = cuotasSnap.docs
           .map((d) => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (a.numero || 0) - (b.numero || 0))
@@ -112,6 +124,7 @@ export default async function handler(req, res) {
             vencida: esCuotaVencida(c),
             fechaVencimiento: c.fechaVencimiento || "",
             tieneCupon: Boolean(c.mpInitPoint),
+            extrasIncluidos: extrasPorCuota[c.id] || [],
           }));
 
         resultados.push({
