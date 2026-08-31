@@ -554,6 +554,32 @@ button {
   padding: 20px;
 }
 
+/* Fondo de playa con sol y mar, armado con degradados (sin foto externa) */
+.portal-screen {
+  background:
+    radial-gradient(circle 140px at 50% 30%, #FFF6D8 0%, #FFE9A8 35%, rgba(255, 216, 138, 0) 70%),
+    linear-gradient(
+      to bottom,
+      #FDE9B0 0%,
+      #FBCB8B 18%,
+      #F3A56E 32%,
+      #E9825F 42%,
+      #4FAFA8 46%,
+      #2E8F92 55%,
+      #1D6E7C 70%,
+      #124C5C 100%
+    );
+}
+
+.portal-logo {
+  display: block;
+  max-width: 220px;
+  width: 70%;
+  height: auto;
+  margin: 0 auto 20px;
+  border-radius: 10px;
+}
+
 .login-card {
   background: var(--cream);
   padding: 36px;
