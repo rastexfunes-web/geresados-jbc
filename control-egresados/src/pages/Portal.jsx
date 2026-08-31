@@ -1,5 +1,11 @@
 import { useState } from "react";
 
+function formatFecha(fechaISO) {
+  if (!fechaISO) return "";
+  const [y, m, d] = fechaISO.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 export default function Portal() {
   const [busqueda, setBusqueda] = useState("");
   const [resultados, setResultados] = useState(null);
@@ -110,6 +116,7 @@ export default function Portal() {
                         <div>{label}</div>
                         <div style={{ fontSize: 12, color: "var(--slate)" }}>
                           ${Number(c.monto).toLocaleString("es-AR")}
+                          {c.fechaVencimiento && ` · vence ${formatFecha(c.fechaVencimiento)}`}
                           {c.vencida && <span style={{ color: "var(--rust)" }}> · vencida</span>}
                         </div>
                       </div>
