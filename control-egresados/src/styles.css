@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&family=Anton&family=Oswald:wght@500;600;700&display=swap');
 
 :root {
   --navy: #17233F;
@@ -554,32 +554,272 @@ button {
   padding: 20px;
 }
 
-/* Fondo de playa con sol y mar, armado con degradados (sin foto externa) */
+/* ---------- Portal "varsity" JBC Egresados ---------- */
+
+:root {
+  --varsity-blue: #5E90C4;
+  --varsity-blue-dark: #3E6A9C;
+  --varsity-cream: #F3EEE1;
+}
+
 .portal-screen {
-  background:
-    radial-gradient(circle 140px at 50% 30%, #FFF6D8 0%, #FFE9A8 35%, rgba(255, 216, 138, 0) 70%),
-    linear-gradient(
-      to bottom,
-      #FDE9B0 0%,
-      #FBCB8B 18%,
-      #F3A56E 32%,
-      #E9825F 42%,
-      #4FAFA8 46%,
-      #2E8F92 55%,
-      #1D6E7C 70%,
-      #124C5C 100%
-    );
+  display: block;
+  min-height: 100vh;
+  padding: 0;
+  background: var(--varsity-cream);
+  position: relative;
+  overflow-x: hidden;
+}
+
+.portal-screen::before,
+.portal-screen::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 140px;
+  background: repeating-linear-gradient(
+    115deg,
+    var(--navy) 0 26px,
+    var(--varsity-blue) 26px 34px,
+    var(--varsity-cream) 34px 44px
+  );
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.portal-screen::before { left: -60px; }
+.portal-screen::after { right: -60px; }
+
+.portal-chevron {
+  position: relative;
+  z-index: 1;
+  background: var(--navy);
+  color: var(--varsity-cream);
+  text-align: center;
+  padding: 28px 20px 46px;
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+}
+
+.portal-chevron .jbc-word {
+  font-family: 'Anton', sans-serif;
+  font-size: 46px;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  color: var(--varsity-cream);
+  text-shadow: 0 2px 0 rgba(0,0,0,0.35);
+}
+
+.portal-chevron .jbc-sub {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.28em;
+  color: var(--varsity-blue);
+  margin-top: 2px;
+}
+
+.portal-chevron .jbc-est {
+  font-family: 'Oswald', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: rgba(243,238,225,0.6);
+  margin-top: 6px;
+}
+
+.portal-chevron .jbc-star { color: var(--gold); margin-top: 4px; font-size: 12px; }
+
+.portal-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  padding: 0 20px 40px;
+  margin-top: -18px;
+}
+
+.portal-card {
+  background: #FBFAF6;
+  border-radius: 18px;
+  padding: 34px 28px;
+  width: 440px;
+  max-width: 100%;
+  box-shadow: 0 24px 60px rgba(23,35,63,0.18);
+}
+
+.portal-eyebrow {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  color: var(--varsity-blue-dark);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.portal-eyebrow::before,
+.portal-eyebrow::after {
+  content: "";
+  height: 1px;
+  width: 26px;
+  background: var(--varsity-blue-dark);
+  opacity: 0.5;
 }
 
 .portal-titulo {
-  font-family: 'Poppins', 'Inter', sans-serif;
-  font-weight: 800;
-  font-size: 24px;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  font-family: 'Anton', sans-serif;
+  font-size: 40px;
+  line-height: 1.02;
+  letter-spacing: 0.01em;
   text-align: center;
   color: var(--navy);
-  margin: 0 0 22px;
+  text-shadow: 0 2px 0 rgba(23,35,63,0.12);
+  margin: 6px 0 16px;
+}
+
+.portal-ribbon {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  font-size: 14px;
+  color: #fff;
+  background: var(--varsity-blue);
+  text-align: center;
+  padding: 9px 20px;
+  margin: 0 auto 16px;
+  max-width: 300px;
+  position: relative;
+}
+
+.portal-ribbon::before,
+.portal-ribbon::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  background: var(--varsity-blue-dark);
+}
+
+.portal-ribbon::before { left: -16px; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.portal-ribbon::after { right: -16px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+
+.portal-divider {
+  text-align: center;
+  color: var(--varsity-blue);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.portal-divider::before,
+.portal-divider::after {
+  content: "";
+  height: 1px;
+  width: 60px;
+  background: var(--line);
+}
+
+.portal-subtitulo {
+  text-align: center;
+  font-weight: 600;
+  color: var(--navy);
+  font-size: 14.5px;
+  line-height: 1.4;
+  margin-bottom: 20px;
+}
+
+.portal-input-wrap {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.portal-input-icon {
+  background: #D9E6F2;
+  color: var(--varsity-blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.portal-input-wrap input {
+  border: none;
+  border-radius: 0;
+  flex: 1;
+  padding: 0 14px;
+  font-size: 15px;
+}
+
+.portal-input-wrap input:focus { outline: none; }
+
+.portal-btn-buscar {
+  width: 100%;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.portal-btn-buscar:disabled { opacity: 0.6; }
+
+.portal-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #DCE8F3;
+  color: var(--varsity-blue-dark);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.portal-info svg { flex-shrink: 0; margin-top: 2px; }
+
+.portal-footer {
+  position: relative;
+  z-index: 1;
+  background: var(--navy);
+  color: var(--varsity-cream);
+  padding: 18px 20px 22px;
+  text-align: center;
+}
+
+.portal-footer .shield { margin: 0 auto 10px; display: block; }
+
+.portal-footer-tag {
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--varsity-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border-top: 1px dashed rgba(243,238,225,0.25);
+  padding-top: 12px;
 }
 
 .login-card {
