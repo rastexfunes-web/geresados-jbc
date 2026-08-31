@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&family=Anton&family=Oswald:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&family=Anton&family=Oswald:wght@500;600;700&family=Bevan&display=swap');
 
 :root {
   --navy: #17233F;
@@ -602,9 +602,9 @@ button {
 }
 
 .portal-chevron .jbc-word {
-  font-family: 'Anton', sans-serif;
-  font-size: 46px;
-  letter-spacing: 0.03em;
+  font-family: 'Bevan', serif;
+  font-size: 44px;
+  letter-spacing: 0.02em;
   line-height: 1;
   color: var(--varsity-cream);
   text-shadow: 0 2px 0 rgba(0,0,0,0.35);
@@ -670,10 +670,10 @@ button {
 }
 
 .portal-titulo {
-  font-family: 'Anton', sans-serif;
-  font-size: 40px;
-  line-height: 1.02;
-  letter-spacing: 0.01em;
+  font-family: 'Bevan', serif;
+  font-size: 36px;
+  line-height: 1.05;
+  letter-spacing: 0;
   text-align: center;
   color: var(--navy);
   text-shadow: 0 2px 0 rgba(23,35,63,0.12);

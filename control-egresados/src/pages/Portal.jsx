@@ -43,7 +43,7 @@ function EscudoJBC() {
         strokeWidth="1.5"
         strokeDasharray="2 2"
       />
-      <text x="26" y="30" textAnchor="middle" fontFamily="Anton, sans-serif" fontSize="15" fill="#F3EEE1">
+      <text x="26" y="30" textAnchor="middle" fontFamily="Bevan, serif" fontSize="14" fill="#F3EEE1">
         JBC
       </text>
       <text x="26" y="42" textAnchor="middle" fontFamily="Oswald, sans-serif" fontSize="5.5" letterSpacing="1" fill="#5E90C4">
