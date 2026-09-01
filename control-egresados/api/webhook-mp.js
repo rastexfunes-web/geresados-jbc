@@ -28,6 +28,22 @@ function getDb() {
   return getFirestore();
 }
 
+// Mercado Pago exige las fechas de expiración en ISO 8601 con offset de
+// huso horario explícito (ej: -03:00), no en formato UTC con "Z".
+function fechaISOConOffsetAR(date) {
+  const offsetMs = 3 * 60 * 60 * 1000; // Argentina = UTC-3 todo el año
+  const local = new Date(date.getTime() - offsetMs);
+  const pad = (n) => String(n).padStart(2, "0");
+  const yyyy = local.getUTCFullYear();
+  const mm = pad(local.getUTCMonth() + 1);
+  const dd = pad(local.getUTCDate());
+  const hh = pad(local.getUTCHours());
+  const mi = pad(local.getUTCMinutes());
+  const ss = pad(local.getUTCSeconds());
+  const ms = String(local.getUTCMilliseconds()).padStart(3, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}.${ms}-03:00`;
+}
+
 export default async function handler(req, res) {
   try {
     // Mercado Pago manda notificaciones en dos formatos posibles:
@@ -82,13 +98,12 @@ export default async function handler(req, res) {
       if (preferenceId) {
         try {
           const preferenceClient = new Preference(client);
-          const ahora = new Date().toISOString();
           await preferenceClient.update({
             id: preferenceId,
             body: {
               expires: true,
-              expiration_date_from: ahora,
-              expiration_date_to: ahora,
+              expiration_date_from: fechaISOConOffsetAR(new Date("2020-01-01")),
+              expiration_date_to: fechaISOConOffsetAR(new Date()),
             },
           });
         } catch (err) {
