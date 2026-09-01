@@ -100,7 +100,7 @@ export default async function handler(req, res) {
           const preferenceClient = new Preference(client);
           await preferenceClient.update({
             id: preferenceId,
-            body: {
+            updatePreferenceRequest: {
               expires: true,
               expiration_date_from: fechaISOConOffsetAR(new Date("2020-01-01")),
               expiration_date_to: fechaISOConOffsetAR(new Date()),
