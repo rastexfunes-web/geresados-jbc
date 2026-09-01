@@ -35,6 +35,34 @@ export default function Contable() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [colegioFiltro, setColegioFiltro] = useState("");
+  const [reconciliando, setReconciliando] = useState(false);
+  const [resultadoReconciliar, setResultadoReconciliar] = useState(null);
+
+  async function handleReconciliar() {
+    const horas = Number(prompt("¿De cuántas horas para atrás querés revisar los pagos?", "5"));
+    if (!horas || horas <= 0) return;
+    setReconciliando(true);
+    setResultadoReconciliar(null);
+    try {
+      const resp = await fetch("/api/reconciliar-pagos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ horas }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "No se pudo reconciliar");
+      setResultadoReconciliar(data);
+      // Volvemos a cargar todo para que se refleje en los números.
+      const [c, a, cu] = await Promise.all([listColegios(), listTodosLosAlumnos(), listTodasLasCuotas()]);
+      setColegios(c);
+      setAlumnos(a);
+      setCuotas(cu);
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setReconciliando(false);
+    }
+  }
 
   useEffect(() => {
     Promise.all([listColegios(), listTodosLosAlumnos(), listTodasLasCuotas()]).then(
@@ -134,7 +162,18 @@ export default function Contable() {
           <div className="eyebrow">Panel</div>
           <h1>Contable</h1>
         </div>
+        <button className="btn btn-outline" onClick={handleReconciliar} disabled={reconciliando}>
+          {reconciliando ? "Revisando…" : "Reconciliar pagos con Mercado Pago"}
+        </button>
       </div>
+
+      {resultadoReconciliar && (
+        <div className="card" style={{ padding: "14px 20px", marginBottom: 20, fontSize: 13, color: "var(--slate)" }}>
+          Se revisaron <strong style={{ color: "var(--navy)" }}>{resultadoReconciliar.pagosEncontrados}</strong> pagos aprobados en Mercado Pago.{" "}
+          <strong style={{ color: "var(--green)" }}>{resultadoReconciliar.corregidos}</strong> se corrigieron ahora,{" "}
+          {resultadoReconciliar.yaEstaban} ya estaban bien.
+        </div>
+      )}
 
       <div className="card" style={{ padding: "16px 20px", marginBottom: 24, display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div className="field" style={{ marginBottom: 0 }}>
