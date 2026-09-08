@@ -526,6 +526,52 @@ export async function eliminarCuotaExtra(cuotaId) {
   return deleteDoc(doc(db, "cuotas", cuotaId));
 }
 
+// Nivela el TOTAL a pagar de un alumno para que quede igual al de otro
+// alumno con el mismo plan y los mismos extras, sin importar en qué
+// momento se le cargó cada extra (que es lo que hace que hoy puedan
+// quedar valores distintos entre cuotas pendientes). No toca lo que ya
+// se pagó: reparte lo que falta entre las cuotas (y la seña, si sigue
+// pendiente) para que el total final (pagado + pendiente) coincida con
+// el total "correcto" según el plan del colegio más los extras del alumno.
+export async function nivelarTotalAlumno(alumnoId, colegio) {
+  const alumnoSnap = await getDoc(doc(db, "alumnos", alumnoId));
+  const alumno = alumnoSnap.data();
+
+  const totalExtras = (alumno.extras || []).reduce((acc, ex) => acc + (ex.monto || 0), 0);
+  const totalObjetivo =
+    colegio.montoCuota * colegio.cantidadCuotas + (colegio.montoSena || 0) + totalExtras;
+
+  const cuotasSnap = await getDocs(query(collection(db, "cuotas"), where("alumnoId", "==", alumnoId)));
+  const cuotasDelPlan = cuotasSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((c) => !c.esExtra); // las señas y cuotas normales entran en el total del plan; los extras "aparte" no
+
+  const pagado = cuotasDelPlan.filter((c) => c.estado === "pagada").reduce((acc, c) => acc + c.monto, 0);
+  const pendientes = cuotasDelPlan.filter((c) => c.estado !== "pagada");
+
+  if (pendientes.length === 0) {
+    throw new Error("Este alumno no tiene cuotas pendientes para nivelar (ya pagó todo).");
+  }
+
+  const faltante = Math.round((totalObjetivo - pagado) * 100) / 100;
+  const cantidad = pendientes.length;
+  const base = Math.floor((faltante / cantidad) * 100) / 100;
+
+  const batch = writeBatch(db);
+  pendientes.forEach((c, i) => {
+    const esUltima = i === cantidad - 1;
+    const nuevoMonto = esUltima ? Math.round((faltante - base * (cantidad - 1)) * 100) / 100 : base;
+    batch.update(doc(db, "cuotas", c.id), {
+      monto: Math.max(0, nuevoMonto),
+      mpPreferenceId: null,
+      mpInitPoint: null,
+    });
+  });
+  await batch.commit();
+
+  return { totalObjetivo, pagado, faltante };
+}
+
 export async function actualizarAlumno(alumnoId, data) {
   return updateDoc(doc(db, "alumnos", alumnoId), data);
 }

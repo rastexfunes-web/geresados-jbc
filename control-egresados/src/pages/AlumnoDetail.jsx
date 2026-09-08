@@ -16,6 +16,7 @@ import {
   editarTalleCuotaExtra,
   eliminarExtraRepartido,
   eliminarCuotaExtra,
+  nivelarTotalAlumno,
   actualizarAlumno,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
@@ -115,6 +116,25 @@ export default function AlumnoDetail() {
     }
   }
 
+  async function handleNivelarTotal() {
+    if (
+      !confirm(
+        `¿Nivelar el total de ${alumno.apellido}, ${alumno.nombre}? Esto recalcula lo que le queda pendiente para que el total final (pagado + pendiente) coincida con el monto estándar del colegio más sus extras. No toca lo ya pagado.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const resultado = await nivelarTotalAlumno(alumno.id, colegio);
+      alert(
+        `Listo. Total correcto: $${resultado.totalObjetivo.toLocaleString("es-AR")} — ya pagado: $${resultado.pagado.toLocaleString("es-AR")} — se repartió $${resultado.faltante.toLocaleString("es-AR")} entre las cuotas pendientes.`
+      );
+      refresh();
+    } catch (err) {
+      alert(err.message || "No se pudo nivelar el total.");
+    }
+  }
+
   async function handleEditarTalleExtraRepartido(indice, talleActual) {
     const nuevoTalle = window.prompt("Nuevo talle para este extra:", talleActual || "");
     if (nuevoTalle === null) return;
@@ -174,6 +194,9 @@ export default function AlumnoDetail() {
         <div style={{ display: "flex", gap: 10 }}>
           <button className="btn btn-outline" onClick={() => setShowEditModal(true)}>
             Editar alumno
+          </button>
+          <button className="btn btn-outline" onClick={handleNivelarTotal}>
+            Nivelar total
           </button>
           <a
             className="btn btn-outline"
