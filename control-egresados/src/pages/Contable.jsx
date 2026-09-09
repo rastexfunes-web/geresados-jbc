@@ -37,6 +37,49 @@ export default function Contable() {
   const [colegioFiltro, setColegioFiltro] = useState("");
   const [reconciliando, setReconciliando] = useState(false);
   const [resultadoReconciliar, setResultadoReconciliar] = useState(null);
+  const [backups, setBackups] = useState(null);
+  const [haciendoBackup, setHaciendoBackup] = useState(false);
+
+  async function cargarBackups() {
+    try {
+      const resp = await fetch("/api/backup-diario?listar=1");
+      const data = await resp.json();
+      if (resp.ok) setBackups(data.backups);
+    } catch {
+      // si falla, dejamos la lista como estaba
+    }
+  }
+
+  async function handleHacerBackup() {
+    setHaciendoBackup(true);
+    try {
+      const resp = await fetch("/api/backup-diario", { method: "POST" });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "No se pudo hacer el backup");
+      alert(`Backup del ${data.fecha} listo.`);
+      await cargarBackups();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setHaciendoBackup(false);
+    }
+  }
+
+  async function handleDescargarBackup(fecha) {
+    const resp = await fetch(`/api/backup-diario?descargar=${fecha}`);
+    const data = await resp.json();
+    if (!resp.ok) {
+      alert(data.error || "No se pudo descargar el backup");
+      return;
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `backup-egresados-${fecha}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function handleReconciliar() {
     const horas = Number(prompt("¿De cuántas horas para atrás querés revisar los pagos?", "5"));
@@ -72,6 +115,7 @@ export default function Contable() {
         setCuotas(cu);
       }
     );
+    cargarBackups();
   }, []);
 
   const colegiosPorId = useMemo(() => {
@@ -165,6 +209,9 @@ export default function Contable() {
         <button className="btn btn-outline" onClick={handleReconciliar} disabled={reconciliando}>
           {reconciliando ? "Revisando…" : "Reconciliar pagos con Mercado Pago"}
         </button>
+        <button className="btn btn-outline" onClick={handleHacerBackup} disabled={haciendoBackup}>
+          {haciendoBackup ? "Guardando…" : "Hacer backup ahora"}
+        </button>
       </div>
 
       {resultadoReconciliar && (
@@ -172,6 +219,40 @@ export default function Contable() {
           Se revisaron <strong style={{ color: "var(--navy)" }}>{resultadoReconciliar.pagosEncontrados}</strong> pagos aprobados en Mercado Pago.{" "}
           <strong style={{ color: "var(--green)" }}>{resultadoReconciliar.corregidos}</strong> se corrigieron ahora,{" "}
           {resultadoReconciliar.yaEstaban} ya estaban bien.
+        </div>
+      )}
+
+      {backups?.length > 0 && (
+        <div className="card" style={{ padding: "16px 20px", marginBottom: 24 }}>
+          <strong style={{ display: "block", marginBottom: 8 }}>Copias de seguridad (últimos 30 días)</strong>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Colegios</th>
+                <th>Alumnos</th>
+                <th>Cuotas</th>
+                <th>Trabajos</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {backups.map((b) => (
+                <tr key={b.fecha}>
+                  <td>{b.fecha}</td>
+                  <td>{b.resumen?.colegios ?? "—"}</td>
+                  <td>{b.resumen?.alumnos ?? "—"}</td>
+                  <td>{b.resumen?.cuotas ?? "—"}</td>
+                  <td>{b.resumen?.trabajos ?? "—"}</td>
+                  <td>
+                    <button className="btn btn-outline btn-sm" onClick={() => handleDescargarBackup(b.fecha)}>
+                      Descargar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
