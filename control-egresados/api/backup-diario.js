@@ -42,6 +42,72 @@ export default async function handler(req, res) {
       return;
     }
 
+    // POST { accion: "restaurar", fecha, confirmacion } -> vuelve a escribir
+    // en Firestore los datos de ese backup, reemplazando lo que haya ahora
+    // en esas 4 colecciones. Es destructivo, por eso pide una confirmación
+    // exacta además del método POST.
+    if (req.method === "POST" && req.body?.accion === "restaurar") {
+      if (req.body.confirmacion !== "RESTAURAR") {
+        res.status(400).json({ error: "Falta la confirmación exacta para restaurar" });
+        return;
+      }
+      const fechaBackup = String(req.body.fecha || "");
+      const snap = await db.collection("backups").doc(fechaBackup).get();
+      if (!snap.exists) {
+        res.status(404).json({ error: "No existe un backup con esa fecha" });
+        return;
+      }
+      const backup = snap.data();
+
+      // Antes de pisar nada, guardamos un backup del estado ACTUAL (por si
+      // la restauración fue un error, poder volver atrás).
+      const fechaPreRestauracion = `pre-restauracion-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+      const datosActuales = {};
+      for (const coleccion of COLECCIONES) {
+        const actualSnap = await db.collection(coleccion).get();
+        datosActuales[coleccion] = actualSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+      await db.collection("backups").doc(fechaPreRestauracion).set({
+        fecha: fechaPreRestauracion,
+        creadoEn: new Date().toISOString(),
+        resumen: Object.fromEntries(COLECCIONES.map((c) => [c, datosActuales[c].length])),
+        datos: datosActuales,
+      });
+
+      // Borramos lo que hay actualmente en cada colección y volvemos a
+      // escribir lo que dice el backup elegido. Los batches de Firestore
+      // admiten hasta 500 operaciones, así que vamos de a tandas.
+      function enTandas(arr, tam) {
+        const tandas = [];
+        for (let i = 0; i < arr.length; i += tam) tandas.push(arr.slice(i, i + tam));
+        return tandas;
+      }
+
+      let restaurados = 0;
+      for (const coleccion of COLECCIONES) {
+        const actualSnap = await db.collection(coleccion).get();
+        for (const tanda of enTandas(actualSnap.docs, 450)) {
+          const batchBorrar = db.batch();
+          tanda.forEach((d) => batchBorrar.delete(d.ref));
+          await batchBorrar.commit();
+        }
+
+        const documentos = backup.datos?.[coleccion] || [];
+        for (const tanda of enTandas(documentos, 450)) {
+          const batchEscribir = db.batch();
+          tanda.forEach((doc) => {
+            const { id, ...resto } = doc;
+            batchEscribir.set(db.collection(coleccion).doc(id), resto);
+          });
+          await batchEscribir.commit();
+        }
+        restaurados += documentos.length;
+      }
+
+      res.status(200).json({ ok: true, restaurados, backupDePreRestauracion: fechaPreRestauracion });
+      return;
+    }
+
     const fecha = new Date().toISOString().slice(0, 10);
 
     const datos = {};

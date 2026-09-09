@@ -81,6 +81,39 @@ export default function Contable() {
     URL.revokeObjectURL(url);
   }
 
+  async function handleRestaurarBackup(fecha) {
+    const primeraConfirmacion = confirm(
+      `¿Restaurar el backup del ${fecha}? Esto REEMPLAZA todos los colegios, alumnos, cuotas y trabajos actuales por los de ese día. Antes de hacerlo, se guarda automáticamente un backup de cómo está todo ahora mismo, por si hay que volver atrás.`
+    );
+    if (!primeraConfirmacion) return;
+
+    const escrito = prompt('Para confirmar, escribí exactamente: RESTAURAR');
+    if (escrito !== "RESTAURAR") {
+      alert("No coincide, se canceló la restauración.");
+      return;
+    }
+
+    try {
+      const resp = await fetch("/api/backup-diario", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion: "restaurar", fecha, confirmacion: "RESTAURAR" }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "No se pudo restaurar");
+      alert(
+        `Listo, se restauraron ${data.restaurados} registros del ${fecha}. Se guardó un backup de cómo estaba todo antes, con fecha "${data.backupDePreRestauracion}", por si hace falta deshacerlo.`
+      );
+      const [c, a, cu] = await Promise.all([listColegios(), listTodosLosAlumnos(), listTodasLasCuotas()]);
+      setColegios(c);
+      setAlumnos(a);
+      setCuotas(cu);
+      await cargarBackups();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  }
+
   async function handleReconciliar() {
     const horas = Number(prompt("¿De cuántas horas para atrás querés revisar los pagos?", "5"));
     if (!horas || horas <= 0) return;
@@ -244,9 +277,12 @@ export default function Contable() {
                   <td>{b.resumen?.alumnos ?? "—"}</td>
                   <td>{b.resumen?.cuotas ?? "—"}</td>
                   <td>{b.resumen?.trabajos ?? "—"}</td>
-                  <td>
+                  <td style={{ display: "flex", gap: 8 }}>
                     <button className="btn btn-outline btn-sm" onClick={() => handleDescargarBackup(b.fecha)}>
                       Descargar
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleRestaurarBackup(b.fecha)}>
+                      Restaurar
                     </button>
                   </td>
                 </tr>
