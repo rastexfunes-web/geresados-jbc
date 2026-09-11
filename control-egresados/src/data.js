@@ -303,9 +303,19 @@ export function formatFechaAR(fechaISO) {
   return `${d}/${m}/${y}`;
 }
 
+// Argentina es UTC-3 todo el año (no tiene horario de verano). Calculamos
+// "hoy" en su huso horario, no en UTC, para que el corte de vencimiento no
+// se adelante de noche (que fue justo el bug: desde ~21hs Argentina, UTC ya
+// era el día siguiente y las cuotas se marcaban vencidas antes de tiempo).
+export function hoyEnArgentina() {
+  const ahora = new Date();
+  const argentina = new Date(ahora.getTime() - 3 * 60 * 60 * 1000);
+  return argentina.toISOString().slice(0, 10);
+}
+
 export function esCuotaVencida(cuota) {
   if (cuota.estado === "pagada" || !cuota.fechaVencimiento) return false;
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyEnArgentina();
   return cuota.fechaVencimiento < hoy;
 }
 
@@ -380,7 +390,7 @@ export async function eliminarTrabajo(trabajoId) {
 // seña) se considera ya devengada, para no perderla de la contabilidad.
 export function cuotaYaDevengada(cuota) {
   if (!cuota.fechaVencimiento) return true;
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyEnArgentina();
   return cuota.fechaVencimiento <= hoy;
 }
 

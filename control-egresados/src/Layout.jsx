@@ -8,6 +8,7 @@ import {
   resumenDeuda,
   listTodosLosAlumnos,
   listTodasLasCuotas,
+  hoyEnArgentina,
 } from "./data";
 
 export default function Layout() {
@@ -29,7 +30,7 @@ export default function Layout() {
   }, []);
 
   async function cargarAlertaHoy() {
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = hoyEnArgentina();
     const [alumnos, cuotas] = await Promise.all([listTodosLosAlumnos(), listTodasLasCuotas()]);
     const alumnosPorId = Object.fromEntries(alumnos.map((a) => [a.id, a]));
     const pendientesConFecha = cuotas

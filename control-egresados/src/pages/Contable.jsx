@@ -7,18 +7,26 @@ import {
   esCuotaVencida,
   montoConRecargo,
   formatFechaAR,
+  hoyEnArgentina,
 } from "../data";
+
+// Convierte un objeto Date a la fecha (YYYY-MM-DD) que corresponde en
+// Argentina (UTC-3), no en UTC — mismo motivo que hoyEnArgentina().
+function aFechaArgentina(date) {
+  const argentina = new Date(date.getTime() - 3 * 60 * 60 * 1000);
+  return argentina.toISOString().slice(0, 10);
+}
 
 function fechaPagoISO(cuota) {
   if (!cuota.fechaPago) return null;
   const d = cuota.fechaPago.toDate ? cuota.fechaPago.toDate() : new Date(cuota.fechaPago);
-  return d.toISOString().slice(0, 10);
+  return aFechaArgentina(d);
 }
 
 function timestampISO(ts) {
   if (!ts) return null;
   const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toISOString().slice(0, 10);
+  return aFechaArgentina(d);
 }
 
 function dentroDelRango(fechaISO, desde, hasta) {
@@ -313,7 +321,7 @@ export default function Contable() {
         <button
           className="btn btn-outline btn-sm"
           onClick={() => {
-            const hoy = new Date().toISOString().slice(0, 10);
+            const hoy = hoyEnArgentina();
             setDesde(hoy);
             setHasta(hoy);
           }}

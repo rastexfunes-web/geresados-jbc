@@ -16,9 +16,18 @@ function getDb() {
 
 const APP_URL = "https://www.jbc-egresados.com.ar";
 
+// Argentina es UTC-3 todo el año. Calculamos "hoy" en su huso horario, no
+// en UTC del servidor, para que el corte de vencimiento no se adelante de
+// noche (bug real: desde ~21hs Argentina, UTC ya era el día siguiente).
+function hoyEnArgentina() {
+  const ahora = new Date();
+  const argentina = new Date(ahora.getTime() - 3 * 60 * 60 * 1000);
+  return argentina.toISOString().slice(0, 10);
+}
+
 function esCuotaVencida(cuota) {
   if (cuota.estado === "pagada" || !cuota.fechaVencimiento) return false;
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyEnArgentina();
   return cuota.fechaVencimiento < hoy;
 }
 
