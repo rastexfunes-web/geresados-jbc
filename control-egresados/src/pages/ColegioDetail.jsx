@@ -737,6 +737,7 @@ function ExtractoDelegadaModal({ colegio, alumnos, onClose }) {
   const [datos, setDatos] = useState(null);
   const [telefono, setTelefono] = useState(colegio.telefonoDelegada || "");
   const [nombreDelegada, setNombreDelegada] = useState(colegio.nombreDelegada || "");
+  const [copiado, setCopiado] = useState(false);
 
   const opciones = [
     { numero: 0, label: "Seña" },
@@ -881,9 +882,26 @@ function ExtractoDelegadaModal({ colegio, alumnos, onClose }) {
         <div className="modal-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>Cerrar</button>
           {datos?.length > 0 && (
-            <a className="btn btn-gold" href={linkWhatsappExtracto()} target="_blank" rel="noreferrer">
-              Enviar por WhatsApp
-            </a>
+            <>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(textoExtracto());
+                    setCopiado(true);
+                    setTimeout(() => setCopiado(false), 2000);
+                  } catch {
+                    // si el navegador bloquea el clipboard, no rompemos nada
+                  }
+                }}
+              >
+                {copiado ? "✓ Copiado" : "Copiar"}
+              </button>
+              <a className="btn btn-gold" href={linkWhatsappExtracto()} target="_blank" rel="noreferrer">
+                Enviar por WhatsApp
+              </a>
+            </>
           )}
         </div>
       </div>
