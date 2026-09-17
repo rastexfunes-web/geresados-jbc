@@ -265,7 +265,7 @@ export default function Contable() {
 
       {backups?.length > 0 && (
         <div className="card" style={{ padding: "16px 20px", marginBottom: 24 }}>
-          <strong style={{ display: "block", marginBottom: 8 }}>Copias de seguridad (últimos 30 días)</strong>
+          <strong style={{ display: "block", marginBottom: 8 }}>Copias de seguridad (últimos 5 días)</strong>
           <table className="table">
             <thead>
               <tr>

@@ -14,7 +14,7 @@ function getDb() {
 }
 
 const COLECCIONES = ["colegios", "alumnos", "cuotas", "trabajos"];
-const DIAS_A_CONSERVAR = 30;
+const DIAS_A_CONSERVAR = 5;
 
 export default async function handler(req, res) {
   try {
