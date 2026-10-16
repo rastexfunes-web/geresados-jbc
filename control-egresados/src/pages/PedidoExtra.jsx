@@ -90,6 +90,8 @@ export default function PedidoExtra() {
                       if (nuevo === "Remera" || nuevo === "Chomba") setTalle(info.talleSuperior || "");
                       else if (nuevo === "Buzo" || nuevo === "Campera") setTalle(info.talleAbrigo || "");
                       else setTalle("");
+                      const precio = info.preciosExtras?.[nuevo];
+                      if (precio) setPrecioUnitario(String(precio));
                     }}
                   >
                     {t}
@@ -125,6 +127,7 @@ export default function PedidoExtra() {
                   min="0"
                   step="0.01"
                   value={precioUnitario}
+                  readOnly={!!info?.preciosExtras?.[tipoExtra]}
                   onChange={(e) => setPrecioUnitario(e.target.value)}
                   required
                 />

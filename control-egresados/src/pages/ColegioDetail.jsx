@@ -939,6 +939,13 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
   const [recargoPorcentaje, setRecargoPorcentaje] = useState(colegio.recargoPorcentaje || "");
   const [telefonoDelegada, setTelefonoDelegada] = useState(colegio.telefonoDelegada || "");
   const [nombreDelegada, setNombreDelegada] = useState(colegio.nombreDelegada || "");
+  const [preciosExtras, setPreciosExtras] = useState({
+    Remera: colegio.preciosExtras?.Remera ?? "",
+    Chomba: colegio.preciosExtras?.Chomba ?? "",
+    Buzo: colegio.preciosExtras?.Buzo ?? "",
+    Campera: colegio.preciosExtras?.Campera ?? "",
+    Emoji: colegio.preciosExtras?.Emoji ?? "",
+  });
   const [aplicarAAlumnos, setAplicarAAlumnos] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -961,6 +968,9 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
         recargoPorcentaje: Number(recargoPorcentaje) || 0,
         telefonoDelegada,
         nombreDelegada,
+        preciosExtras: Object.fromEntries(
+          Object.entries(preciosExtras).map(([k, v]) => [k, Number(v) || 0])
+        ),
       };
       await actualizarColegio(colegio.id, colegioActualizado);
       if (aplicarAAlumnos) {
@@ -1089,6 +1099,27 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
               onChange={(e) => setTelefonoDelegada(e.target.value)}
               placeholder="Ej: 3411234567"
             />
+          </div>
+          <div className="field">
+            <label>Precio de los extras (por unidad, opcional)</label>
+            <div className="form-row">
+              {Object.keys(preciosExtras).map((tipo) => (
+                <div className="field" key={tipo}>
+                  <label style={{ fontSize: 12 }}>{tipo} ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={preciosExtras[tipo]}
+                    onChange={(e) => setPreciosExtras({ ...preciosExtras, [tipo]: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: "var(--slate)", margin: 0 }}>
+              Al agregar un extra se carga solo este importe. Dejalo vacío o en 0 para cargarlo a mano.
+            </p>
           </div>
           <p style={{ fontSize: 12, color: "var(--slate)" }}>
             Cambiar la cantidad de cuotas, el vencimiento o el recargo solo afecta a los alumnos que cargues de ahora en adelante.

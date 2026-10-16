@@ -602,6 +602,8 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
                     const nuevo = tipoExtra === t ? "" : t;
                     setTipoExtra(nuevo);
                     setTalle(talleDeFicha(alumno, nuevo));
+                    const precio = colegio.preciosExtras?.[nuevo];
+                    if (precio) setPrecioUnitario(String(precio));
                   }}
                 >
                   {t}
