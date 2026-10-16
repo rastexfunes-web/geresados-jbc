@@ -45,6 +45,7 @@ export default async function handler(req, res) {
         colegioNombre: colegio.nombre,
         talleSuperior: alumno.talleSuperior || "",
         talleAbrigo: alumno.talleAbrigo || "",
+        preciosExtras: colegio.preciosExtras || {},
       });
       return;
     }
@@ -81,10 +82,18 @@ export default async function handler(req, res) {
         }
       });
 
-      const montoTotal = Number(monto);
+      let montoTotal = Number(monto);
+
+      const tipoBase = String(descripcion).replace(/\s*\(x\d+\)\s*$/i, "").trim();
+      // Si el colegio tiene precio cargado para este extra, manda ese precio
+      // (el alumno no puede cambiarlo desde el link público).
+      const precioColegio = Number(colegio.preciosExtras?.[tipoBase]) || 0;
+      if (precioColegio > 0) {
+        const mCant = String(descripcion).match(/\(x(\d+)\)\s*$/i);
+        montoTotal = precioColegio * (mCant ? Number(mCant[1]) : 1);
+      }
 
       // Si no vino talle, se usa el de la ficha del alumno según la prenda.
-      const tipoBase = String(descripcion).replace(/\s*\(x\d+\)\s*$/i, "").trim();
       let talleFinal = talle || "";
       if (!talleFinal) {
         if (tipoBase === "Remera" || tipoBase === "Chomba") talleFinal = alumno.talleSuperior || "";
