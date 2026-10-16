@@ -20,6 +20,7 @@ export default function ColegioDetail() {
   const [colegio, setColegio] = useState(null);
   const [alumnos, setAlumnos] = useState(null);
   const [resumenes, setResumenes] = useState({});
+  const [extrasCuotas, setExtrasCuotas] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
@@ -41,10 +42,11 @@ export default function ColegioDetail() {
     const entries = await Promise.all(
       al.map(async (a) => {
         const cuotas = await listCuotasAlumno(a.id);
-        return [a.id, resumenDeuda(cuotas, c)];
+        return [a.id, resumenDeuda(cuotas, c), cuotas.filter((q) => q.esExtra)];
       })
     );
-    setResumenes(Object.fromEntries(entries));
+    setResumenes(Object.fromEntries(entries.map(([id, r]) => [id, r])));
+    setExtrasCuotas(Object.fromEntries(entries.map(([id, , ex]) => [id, ex])));
   }
 
   useEffect(() => {
@@ -58,6 +60,20 @@ export default function ColegioDetail() {
     ? ((colegio.montoSena || 0) + colegio.cantidadCuotas * colegio.montoCuota) * alumnos.length
     : 0;
 
+  // Todos los extras de un alumno: los repartidos en cuotas (alumno.extras)
+  // y los que quedaron como cobro aparte (cuotas con esExtra).
+  function extrasDeAlumno(a) {
+    const repartidos = (a.extras || []).map((ex) => ({ descripcion: ex.descripcion, talle: ex.talle }));
+    const aparte = (extrasCuotas[a.id] || []).map((q) => ({ descripcion: q.descripcion, talle: q.talle }));
+    return [...repartidos, ...aparte];
+  }
+
+  // "Remera (x2)" -> { tipo: "Remera", cantidad: 2 }
+  function parseExtra(descripcion) {
+    const m = String(descripcion || "").match(/^(.*?)\s*\(x(\d+)\)\s*$/i);
+    return m ? { tipo: m[1].trim(), cantidad: Number(m[2]) } : { tipo: String(descripcion || "").trim(), cantidad: 1 };
+  }
+
   function handleImprimirTalles() {
     const filas = alumnos
       .map((a) => {
@@ -70,7 +86,7 @@ export default function ColegioDetail() {
           <td>${a.prendaAbrigo || "—"}</td>
           <td>${a.talleAbrigo || "—"}</td>
         </tr>`;
-        const filasExtras = (a.extras || [])
+        const filasExtras = extrasDeAlumno(a)
           .map(
             (ex) => `
         <tr>
@@ -97,11 +113,13 @@ export default function ColegioDetail() {
         conteo[a.prendaAbrigo] = conteo[a.prendaAbrigo] || {};
         conteo[a.prendaAbrigo][talle] = (conteo[a.prendaAbrigo][talle] || 0) + 1;
       }
-      (a.extras || []).forEach((ex) => {
-        if (!ex.talle) return;
-        const clave = `Extra: ${ex.descripcion}`;
-        conteo[clave] = conteo[clave] || {};
-        conteo[clave][ex.talle] = (conteo[clave][ex.talle] || 0) + 1;
+      // Los extras se suman a la misma fila de su prenda (ej: Remera extra
+      // se suma a las Remeras) según el talle y la cantidad.
+      extrasDeAlumno(a).forEach((ex) => {
+        const { tipo, cantidad } = parseExtra(ex.descripcion);
+        const talle = ex.talle || "sin talle";
+        conteo[tipo] = conteo[tipo] || {};
+        conteo[tipo][talle] = (conteo[tipo][talle] || 0) + cantidad;
       });
     });
 
