@@ -43,6 +43,8 @@ export default async function handler(req, res) {
         nombre: alumno.nombre,
         apellido: alumno.apellido,
         colegioNombre: colegio.nombre,
+        talleSuperior: alumno.talleSuperior || "",
+        talleAbrigo: alumno.talleAbrigo || "",
       });
       return;
     }
@@ -81,6 +83,14 @@ export default async function handler(req, res) {
 
       const montoTotal = Number(monto);
 
+      // Si no vino talle, se usa el de la ficha del alumno según la prenda.
+      const tipoBase = String(descripcion).replace(/\s*\(x\d+\)\s*$/i, "").trim();
+      let talleFinal = talle || "";
+      if (!talleFinal) {
+        if (tipoBase === "Remera" || tipoBase === "Chomba") talleFinal = alumno.talleSuperior || "";
+        else if (tipoBase === "Buzo" || tipoBase === "Campera") talleFinal = alumno.talleAbrigo || "";
+      }
+
       if (cuotasPendientes.length > 0) {
         // Reparte el extra entre las cuotas pendientes.
         const cantidad = cuotasPendientes.length;
@@ -101,7 +111,7 @@ export default async function handler(req, res) {
         batch.update(db.collection("alumnos").doc(alumnoId), {
           extras: FieldValue.arrayUnion({
             descripcion,
-            talle: talle || "",
+            talle: talleFinal,
             monto: montoTotal,
             repartidoEnCuotas: cantidad,
             cuotasAfectadas,
@@ -124,7 +134,7 @@ export default async function handler(req, res) {
         esSena: false,
         esExtra: true,
         descripcion,
-        talle: talle || "",
+        talle: talleFinal,
         monto: montoTotal,
         fechaVencimiento: "",
         estado: "pendiente",
