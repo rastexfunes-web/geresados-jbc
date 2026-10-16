@@ -526,6 +526,13 @@ function EditarAlumnoModal({ alumno, onClose, onSaved }) {
 
 const TIPOS_EXTRA = ["Remera", "Chomba", "Buzo", "Campera", "Emoji"];
 
+// Talle de la ficha del alumno según el tipo de prenda del extra.
+function talleDeFicha(alumno, tipo) {
+  if (tipo === "Remera" || tipo === "Chomba") return alumno.talleSuperior || "";
+  if (tipo === "Buzo" || tipo === "Campera") return alumno.talleAbrigo || "";
+  return "";
+}
+
 function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
   const [tipoExtra, setTipoExtra] = useState("");
   const [talle, setTalle] = useState("");
@@ -548,7 +555,7 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
     setSaving(true);
     try {
       const detalle = Number(cantidad) > 1 ? `${tipoExtra} (x${cantidad})` : tipoExtra;
-      const talleFinal = esEmoji ? "" : talle;
+      const talleFinal = esEmoji ? "" : talle || talleDeFicha(alumno, tipoExtra);
       if (cuotasPendientes.length > 0) {
         await repartirExtraEnCuotas({
           alumnoId: alumno.id,
@@ -591,7 +598,11 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
                   key={t}
                   type="button"
                   className={`chip ${tipoExtra === t ? "selected" : ""}`}
-                  onClick={() => setTipoExtra(tipoExtra === t ? "" : t)}
+                  onClick={() => {
+                    const nuevo = tipoExtra === t ? "" : t;
+                    setTipoExtra(nuevo);
+                    setTalle(talleDeFicha(alumno, nuevo));
+                  }}
                 >
                   {t}
                 </button>
