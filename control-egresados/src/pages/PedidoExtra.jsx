@@ -84,7 +84,13 @@ export default function PedidoExtra() {
                     key={t}
                     type="button"
                     className={`chip ${tipoExtra === t ? "selected" : ""}`}
-                    onClick={() => setTipoExtra(tipoExtra === t ? "" : t)}
+                    onClick={() => {
+                      const nuevo = tipoExtra === t ? "" : t;
+                      setTipoExtra(nuevo);
+                      if (nuevo === "Remera" || nuevo === "Chomba") setTalle(info.talleSuperior || "");
+                      else if (nuevo === "Buzo" || nuevo === "Campera") setTalle(info.talleAbrigo || "");
+                      else setTalle("");
+                    }}
                   >
                     {t}
                   </button>
