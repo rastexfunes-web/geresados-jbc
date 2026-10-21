@@ -1102,7 +1102,7 @@ function EditarColegioModal({ colegio, onClose, onSaved }) {
           </div>
           <div className="field">
             <label>Precio de los extras (por unidad, opcional)</label>
-            <div className="form-row">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 10 }}>
               {Object.keys(preciosExtras).map((tipo) => (
                 <div className="field" key={tipo}>
                   <label style={{ fontSize: 12 }}>{tipo} ($)</label>
