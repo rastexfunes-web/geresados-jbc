@@ -76,28 +76,42 @@ export default function ColegioDetail() {
   }
 
   function handleImprimirTalles() {
-    const filas = alumnos
+    const escH = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // Texto del talle de una prenda: "M", o "M x2" si tiene una extra del mismo
+    // talle. Si el extra es de otro talle se muestra aparte: "M + L".
+    function celdaTalle(prenda, talleFicha, tiposExtra, a) {
+      const porTalle = {};
+      const sumarTalle = (talle, n) => {
+        const t = String(talle || "").trim().toUpperCase() || "SIN TALLE";
+        porTalle[t] = (porTalle[t] || 0) + n;
+      };
+      if (prenda) sumarTalle(talleFicha, 1);
+      extrasDeAlumno(a).forEach((ex) => {
+        const { tipo, cantidad } = parseExtra(ex.descripcion);
+        if (tiposExtra.includes(tipo.toLowerCase())) {
+          // Un extra sin talle se asume del mismo talle que la ficha.
+          sumarTalle(ex.talle || talleFicha, cantidad);
+        }
+      });
+      const partes = Object.entries(porTalle).map(([t, n]) => (n > 1 ? `${t} x${n}` : t));
+      return partes.length ? partes.join(" + ") : "—";
+    }
+
+    const ordenados = [...alumnos].sort((x, y) =>
+      `${x.apellido} ${x.nombre}`.localeCompare(`${y.apellido} ${y.nombre}`, "es")
+    );
+    const filas = ordenados
       .map((a) => {
-        const filaPrincipal = `
+        const remera = celdaTalle(a.prendaSuperior, a.talleSuperior, ["remera", "chomba"], a);
+        const abrigo = celdaTalle(a.prendaAbrigo, a.talleAbrigo, ["buzo", "campera"], a);
+        return `
         <tr>
-          <td>${a.apellido}, ${a.nombre}</td>
-          <td>${a.apodo || "—"}</td>
-          <td>${a.prendaSuperior || "—"}</td>
-          <td>${a.talleSuperior || "—"}</td>
-          <td>${a.prendaAbrigo || "—"}</td>
-          <td>${a.talleAbrigo || "—"}</td>
+          <td>${escH(a.nombre)}</td>
+          <td>${escH(a.apellido)}</td>
+          <td><strong>${escH(remera)}</strong>${a.prendaSuperior ? `<div class="prenda">${escH(a.prendaSuperior)}</div>` : ""}</td>
+          <td><strong>${escH(abrigo)}</strong>${a.prendaAbrigo ? `<div class="prenda">${escH(a.prendaAbrigo)}</div>` : ""}</td>
         </tr>`;
-        const filasExtras = extrasDeAlumno(a)
-          .map(
-            (ex) => `
-        <tr>
-          <td>${a.apellido}, ${a.nombre}</td>
-          <td colspan="3">Extra: ${ex.descripcion}</td>
-          <td colspan="2">${ex.talle || "—"}</td>
-        </tr>`
-          )
-          .join("");
-        return filaPrincipal + filasExtras;
       })
       .join("");
 
@@ -152,6 +166,7 @@ export default function ColegioDetail() {
             th { background: #17233F; color: white; }
             tr:nth-child(even) { background: #F7F5EF; }
             .resumen td { border: 1px solid #ccc; }
+            .prenda { font-size: 10px; color: #5B6472; }
           </style>
         </head>
         <body>
@@ -160,12 +175,10 @@ export default function ColegioDetail() {
           <table>
             <thead>
               <tr>
-                <th>Alumno</th>
-                <th>Apodo</th>
-                <th>Remera/Chomba</th>
-                <th>Talle</th>
-                <th>Campera/Buzo</th>
-                <th>Talle</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Talle remera</th>
+                <th>Talle buzo / campera</th>
               </tr>
             </thead>
             <tbody>${filas}</tbody>
