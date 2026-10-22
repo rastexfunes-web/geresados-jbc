@@ -103,24 +103,27 @@ export default function ColegioDetail() {
 
     // Conteo para producción: cuántas prendas de cada tipo y talle hay que hacer.
     const conteo = {};
+    // Se normaliza el nombre de la prenda y el talle (mayúsculas/minúsculas y
+    // espacios) para que "Remera", "REMERA" y "remera", o "s" y "S", se sumen juntos.
+    const normPrenda = (t) => {
+      const x = String(t || "").trim();
+      return x ? x.charAt(0).toUpperCase() + x.slice(1).toLowerCase() : x;
+    };
+    const normTalle = (t) => String(t || "").trim().toUpperCase() || "sin talle";
+    const sumar = (prenda, talle, cantidad) => {
+      const p = normPrenda(prenda);
+      const t = normTalle(talle);
+      conteo[p] = conteo[p] || {};
+      conteo[p][t] = (conteo[p][t] || 0) + cantidad;
+    };
     alumnos.forEach((a) => {
-      if (a.prendaSuperior) {
-        const talle = a.talleSuperior || "sin talle";
-        conteo[a.prendaSuperior] = conteo[a.prendaSuperior] || {};
-        conteo[a.prendaSuperior][talle] = (conteo[a.prendaSuperior][talle] || 0) + 1;
-      }
-      if (a.prendaAbrigo) {
-        const talle = a.talleAbrigo || "sin talle";
-        conteo[a.prendaAbrigo] = conteo[a.prendaAbrigo] || {};
-        conteo[a.prendaAbrigo][talle] = (conteo[a.prendaAbrigo][talle] || 0) + 1;
-      }
+      if (a.prendaSuperior) sumar(a.prendaSuperior, a.talleSuperior, 1);
+      if (a.prendaAbrigo) sumar(a.prendaAbrigo, a.talleAbrigo, 1);
       // Los extras se suman a la misma fila de su prenda (ej: Remera extra
       // se suma a las Remeras) según el talle y la cantidad.
       extrasDeAlumno(a).forEach((ex) => {
         const { tipo, cantidad } = parseExtra(ex.descripcion);
-        const talle = ex.talle || "sin talle";
-        conteo[tipo] = conteo[tipo] || {};
-        conteo[tipo][talle] = (conteo[tipo][talle] || 0) + cantidad;
+        sumar(tipo, ex.talle, cantidad);
       });
     });
 
@@ -130,7 +133,8 @@ export default function ColegioDetail() {
           .sort((a, b) => a[0].localeCompare(b[0]))
           .map(([talle, cant]) => `<td>${talle}: <strong>${cant}</strong></td>`)
           .join("");
-        return `<tr><td><strong>${prenda}</strong></td>${detalle}</tr>`;
+        const total = Object.values(talles).reduce((acc, n) => acc + n, 0);
+        return `<tr><td><strong>${prenda}</strong><br/>Total: <strong>${total}</strong></td>${detalle}</tr>`;
       })
       .join("");
 
