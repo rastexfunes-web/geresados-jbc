@@ -186,6 +186,73 @@ export default function ColegioDetail() {
     ventana.print();
   }
 
+  // Lista para el sector de bordados: nombre, apellido, talles, apodo y emoji.
+  function handleImprimirBordados() {
+    const esc = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const ordenados = [...alumnos].sort((x, y) =>
+      `${x.apellido} ${x.nombre}`.localeCompare(`${y.apellido} ${y.nombre}`, "es")
+    );
+    const filas = ordenados
+      .map((a, i) => {
+        const emojis = extrasDeAlumno(a)
+          .map((ex) => parseExtra(ex.descripcion))
+          .filter((x) => x.tipo.toLowerCase() === "emoji")
+          .reduce((acc, x) => acc + x.cantidad, 0);
+        return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${esc(a.nombre)}</td>
+          <td>${esc(a.apellido)}</td>
+          <td>${esc(a.talleSuperior || "—")}</td>
+          <td>${esc(a.talleAbrigo || "—")}</td>
+          <td>${esc(a.apodo || "—")}</td>
+          <td>${emojis ? (emojis > 1 ? `Sí (x${emojis})` : "Sí") : "—"}</td>
+        </tr>`;
+      })
+      .join("");
+
+    const html = `
+      <html>
+        <head>
+          <title>Bordados — ${esc(colegio.nombre)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #17233F; }
+            h1 { font-size: 20px; margin-bottom: 2px; }
+            .sub { color: #5B6472; font-size: 13px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; font-size: 13px; }
+            th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; }
+            th { background: #17233F; color: white; }
+            tr:nth-child(even) { background: #F7F5EF; }
+          </style>
+        </head>
+        <body>
+          <h1>${esc(colegio.nombre)} — Lista para bordados</h1>
+          <div class="sub">${alumnos.length} alumnos${colegio.fechaEntrega ? ` · Entrega estimada: ${formatFecha(colegio.fechaEntrega)}` : ""}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Talle remera</th>
+                <th>Talle buzo</th>
+                <th>Apodo</th>
+                <th>Emoji</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const ventana = window.open("", "_blank");
+    ventana.document.write(html);
+    ventana.document.close();
+    ventana.focus();
+    ventana.print();
+  }
+
   async function handleCopiarTalleEnExtras() {
     if (
       !confirm(
@@ -243,6 +310,9 @@ export default function ColegioDetail() {
           </button>
           <button className="btn btn-outline" onClick={handleImprimirTalles} disabled={!alumnos?.length}>
             Imprimir talles
+          </button>
+          <button className="btn btn-outline" onClick={handleImprimirBordados} disabled={!alumnos?.length}>
+            Imprimir bordados
           </button>
           <button className="btn btn-outline" onClick={() => setShowExtractoModal(true)} disabled={!alumnos?.length}>
             Extracto para delegada
