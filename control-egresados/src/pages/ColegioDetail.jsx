@@ -11,6 +11,7 @@ import {
   listCuotasAlumno,
   resumenDeuda,
   montoConRecargo,
+  copiarTalleFichaEnExtras,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
 
@@ -181,6 +182,23 @@ export default function ColegioDetail() {
     ventana.print();
   }
 
+  async function handleCopiarTalleEnExtras() {
+    if (
+      !confirm(
+        "A las remeras/chombas extra que no tienen talle les voy a poner el talle de la ficha del alumno. Las que ya tienen talle no se tocan. ¿Seguimos?"
+      )
+    )
+      return;
+    try {
+      const n = await copiarTalleFichaEnExtras(alumnos, extrasCuotas);
+      alert(n ? `Listo: se completó el talle en ${n} extra(s).` : "No había extras de remera sin talle para completar.");
+      await refresh();
+    } catch (err) {
+      console.error(err);
+      alert(`No se pudo completar: ${err.message || err}`);
+    }
+  }
+
   async function handleRecalcularConExtras() {
     if (
       !confirm(
@@ -212,6 +230,9 @@ export default function ColegioDetail() {
         <div style={{ display: "flex", gap: 10 }}>
           <button className="btn btn-outline" onClick={() => setShowEditModal(true)}>
             Editar colegio
+          </button>
+          <button className="btn btn-outline" onClick={handleCopiarTalleEnExtras} disabled={!alumnos?.length}>
+            Copiar talle a remeras extra
           </button>
           <button className="btn btn-outline" onClick={handleRecalcularConExtras} disabled={recalculando || !alumnos?.length}>
             {recalculando ? "Recalculando…" : "Recalcular cuotas (extras)"}

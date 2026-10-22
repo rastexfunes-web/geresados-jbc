@@ -482,6 +482,36 @@ export async function editarTalleCuotaExtra(cuotaId, nuevoTalle) {
   return updateDoc(doc(db, "cuotas", cuotaId), { talle: nuevoTalle });
 }
 
+// Herramienta de una sola vez: a los extras de remera/chomba que quedaron
+// SIN talle les copia el talle de la remera de la ficha del alumno. Los que
+// ya tienen un talle cargado (a propósito) no se tocan. Devuelve cuántos se
+// completaron.
+export async function copiarTalleFichaEnExtras(alumnos, extrasCuotasPorAlumno) {
+  const esRemera = (desc) => /^(remera|chomba)/i.test(String(desc || "").trim());
+  let completados = 0;
+  for (const a of alumnos) {
+    if (!a.talleSuperior) continue;
+    const extras = a.extras || [];
+    let cambio = false;
+    const nuevos = extras.map((ex) => {
+      if (esRemera(ex.descripcion) && !ex.talle) {
+        cambio = true;
+        completados++;
+        return { ...ex, talle: a.talleSuperior };
+      }
+      return ex;
+    });
+    if (cambio) await updateDoc(doc(db, "alumnos", a.id), { extras: nuevos });
+    for (const q of extrasCuotasPorAlumno[a.id] || []) {
+      if (esRemera(q.descripcion) && !q.talle) {
+        await updateDoc(doc(db, "cuotas", q.id), { talle: a.talleSuperior });
+        completados++;
+      }
+    }
+  }
+  return completados;
+}
+
 // Elimina un extra que se había repartido entre cuotas: le resta el monto
 // que le había sumado a cada cuota afectada (solo si esa cuota todavía no
 // está pagada, para no descuadrar plata ya cobrada) y lo saca del historial.

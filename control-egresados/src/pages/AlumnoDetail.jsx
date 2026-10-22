@@ -619,6 +619,20 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
                 onChange={(e) => setTalle(e.target.value)}
                 placeholder="S, M, L, 12, 14…"
               />
+              {(() => {
+                const fichaTalle = talleDeFicha(alumno, tipoExtra) || alumno.talleSuperior || "";
+                if (!fichaTalle) return null;
+                return (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ marginTop: 6 }}
+                    onClick={() => setTalle(fichaTalle)}
+                  >
+                    Copiar talle de la ficha ({fichaTalle})
+                  </button>
+                );
+              })()}
             </div>
           )}
           <div className="form-row">
