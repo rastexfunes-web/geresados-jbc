@@ -75,28 +75,28 @@ export default function ColegioDetail() {
     return m ? { tipo: m[1].trim(), cantidad: Number(m[2]) } : { tipo: String(descripcion || "").trim(), cantidad: 1 };
   }
 
+  // Texto del talle de una prenda: "M", o "M x2" si tiene una extra del mismo
+  // talle. Si el extra es de otro talle se muestra aparte: "M / L".
+  function celdaTalle(prenda, talleFicha, tiposExtra, a) {
+    const porTalle = {};
+    const sumarTalle = (talle, n) => {
+      const t = String(talle || "").trim().toUpperCase() || "SIN TALLE";
+      porTalle[t] = (porTalle[t] || 0) + n;
+    };
+    if (prenda) sumarTalle(talleFicha, 1);
+    extrasDeAlumno(a).forEach((ex) => {
+      const { tipo, cantidad } = parseExtra(ex.descripcion);
+      if (tiposExtra.includes(tipo.toLowerCase())) {
+        // Un extra sin talle se asume del mismo talle que la ficha.
+        sumarTalle(ex.talle || talleFicha, cantidad);
+      }
+    });
+    const partes = Object.entries(porTalle).map(([t, n]) => (n > 1 ? `${t} x${n}` : t));
+    return partes.length ? partes.join(" / ") : "—";
+  }
+
   function handleImprimirTalles() {
     const escH = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-    // Texto del talle de una prenda: "M", o "M x2" si tiene una extra del mismo
-    // talle. Si el extra es de otro talle se muestra aparte: "M + L".
-    function celdaTalle(prenda, talleFicha, tiposExtra, a) {
-      const porTalle = {};
-      const sumarTalle = (talle, n) => {
-        const t = String(talle || "").trim().toUpperCase() || "SIN TALLE";
-        porTalle[t] = (porTalle[t] || 0) + n;
-      };
-      if (prenda) sumarTalle(talleFicha, 1);
-      extrasDeAlumno(a).forEach((ex) => {
-        const { tipo, cantidad } = parseExtra(ex.descripcion);
-        if (tiposExtra.includes(tipo.toLowerCase())) {
-          // Un extra sin talle se asume del mismo talle que la ficha.
-          sumarTalle(ex.talle || talleFicha, cantidad);
-        }
-      });
-      const partes = Object.entries(porTalle).map(([t, n]) => (n > 1 ? `${t} x${n}` : t));
-      return partes.length ? partes.join(" + ") : "—";
-    }
 
     const ordenados = [...alumnos].sort((x, y) =>
       `${x.apellido} ${x.nombre}`.localeCompare(`${y.apellido} ${y.nombre}`, "es")
@@ -201,11 +201,6 @@ export default function ColegioDetail() {
     ventana.print();
   }
 
-  function normalizarPrendaBordado(t) {
-    const x = String(t || "").trim();
-    return x ? x.charAt(0).toUpperCase() + x.slice(1).toLowerCase() : "";
-  }
-
   // Lista para el sector de bordados: nombre, apellido, talles, apodo y emoji.
   function handleImprimirBordados() {
     const esc = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -218,51 +213,17 @@ export default function ColegioDetail() {
           .map((ex) => parseExtra(ex.descripcion))
           .filter((x) => x.tipo.toLowerCase() === "emoji")
           .reduce((acc, x) => acc + x.cantidad, 0);
-        // Detalle de bordado: avisa si lleva más de una prenda del mismo tipo
-        // (ej: remera + remera extra) o una prenda extra de otro tipo.
-        const detalles = ["Remera", "Chomba", "Buzo", "Campera"]
-          .map((tipo) => {
-            const talles = {};
-            let cant = 0;
-            const sumarT = (talle, n) => {
-              const t = String(talle || "").trim().toUpperCase() || "SIN TALLE";
-              talles[t] = (talles[t] || 0) + n;
-              cant += n;
-            };
-            const enFicha =
-              normalizarPrendaBordado(a.prendaSuperior) === tipo
-                ? a.talleSuperior
-                : normalizarPrendaBordado(a.prendaAbrigo) === tipo
-                ? a.talleAbrigo
-                : undefined;
-            const tieneFicha = enFicha !== undefined;
-            if (tieneFicha) sumarT(enFicha, 1);
-            let hayExtra = false;
-            extrasDeAlumno(a).forEach((ex) => {
-              const p = parseExtra(ex.descripcion);
-              if (normalizarPrendaBordado(p.tipo) === tipo) {
-                hayExtra = true;
-                sumarT(ex.talle || enFicha, p.cantidad);
-              }
-            });
-            if (!hayExtra) return "";
-            const detalleTalles = Object.entries(talles)
-              .map(([t, n]) => (n > 1 ? `${t} x${n}` : t))
-              .join(" + ");
-            return `${cant} ${tipo.toLowerCase()}${cant > 1 ? "s" : ""} (${tieneFicha ? "incluye extra · " : "extra · "}${detalleTalles})`;
-          })
-          .filter(Boolean)
-          .join("<br/>");
+        const remera = celdaTalle(a.prendaSuperior, a.talleSuperior, ["remera", "chomba"], a);
+        const abrigo = celdaTalle(a.prendaAbrigo, a.talleAbrigo, ["buzo", "campera"], a);
         return `
         <tr>
           <td>${i + 1}</td>
           <td>${esc(a.nombre)}</td>
           <td>${esc(a.apellido)}</td>
-          <td>${esc(a.talleSuperior || "—")}</td>
-          <td>${esc(a.talleAbrigo || "—")}</td>
+          <td><strong>${esc(remera)}</strong></td>
+          <td><strong>${esc(abrigo)}</strong></td>
           <td>${esc(a.apodo || "—")}</td>
           <td>${emojis ? (emojis > 1 ? `Sí (x${emojis})` : "Sí") : "—"}</td>
-          <td>${detalles || "—"}</td>
         </tr>`;
       })
       .join("");
@@ -294,7 +255,6 @@ export default function ColegioDetail() {
                 <th>Talle buzo</th>
                 <th>Apodo</th>
                 <th>Emoji</th>
-                <th>Detalle de bordado</th>
               </tr>
             </thead>
             <tbody>${filas}</tbody>
