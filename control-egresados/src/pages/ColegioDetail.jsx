@@ -137,6 +137,8 @@ export default function ColegioDetail() {
       // se suma a las Remeras) según el talle y la cantidad.
       extrasDeAlumno(a).forEach((ex) => {
         const { tipo, cantidad } = parseExtra(ex.descripcion);
+        // Los emojis no llevan talle: van en la lista de bordados, no acá.
+        if (tipo.toLowerCase() === "emoji") return;
         sumar(tipo, ex.talle, cantidad);
       });
     });
