@@ -240,15 +240,6 @@ export default function ColegioDetail() {
           <button className="btn btn-outline" onClick={handleImprimirTalles} disabled={!alumnos?.length}>
             Imprimir talles
           </button>
-          <button className="btn btn-outline" onClick={() => setShowWhatsappModal(true)} disabled={!alumnos?.length}>
-            Enviar cuotas por WhatsApp
-          </button>
-          <button className="btn btn-outline" onClick={() => setShowConfirmacionApiModal(true)} disabled={!alumnos?.length}>
-            Confirmar contacto (todo el curso)
-          </button>
-          <button className="btn btn-outline" onClick={() => setShowCuponeraApiModal(true)} disabled={!alumnos?.length}>
-            Enviar cupones (todo el curso)
-          </button>
           <button className="btn btn-outline" onClick={() => setShowExtractoModal(true)} disabled={!alumnos?.length}>
             Extracto para delegada
           </button>
