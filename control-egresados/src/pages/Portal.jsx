@@ -60,8 +60,8 @@ export default function Portal() {
   const [buscando, setBuscando] = useState(false);
   const [pagando, setPagando] = useState(null);
 
-  // Si escribió solo números, buscamos por teléfono. Si no, por nombre y apellido.
-  const esSoloNumeros = /^\d+$/.test(busqueda.trim());
+  // Si escribió solo números (DNI o teléfono), buscamos por eso. Si no, por nombre y apellido.
+  const esSoloNumeros = /^[\d.\s-]+$/.test(busqueda.trim()) && /\d/.test(busqueda);
 
   async function handleBuscar(e) {
     e.preventDefault();
@@ -122,7 +122,7 @@ export default function Portal() {
 
               <form onSubmit={handleBuscar}>
                 <div className="portal-subtitulo">
-                  Ingresá tu contacto de WhatsApp o tu nombre y apellido para buscar tu cuenta
+                  Ingresá tu DNI, tu contacto de WhatsApp o tu nombre y apellido para buscar tu cuenta
                 </div>
                 <div className="portal-input-wrap">
                   <div className="portal-input-icon">
@@ -131,7 +131,7 @@ export default function Portal() {
                   <input
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
-                    placeholder="Ej: 3411234567 o Juan Pérez"
+                    placeholder="DNI, WhatsApp o nombre y apellido"
                     required
                     autoFocus
                   />

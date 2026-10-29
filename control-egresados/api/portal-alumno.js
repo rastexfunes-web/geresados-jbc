@@ -47,7 +47,7 @@ export default async function handler(req, res) {
       const q = String(req.query.q || "").trim().toLowerCase();
 
       if (!tel && !q) {
-        res.status(400).json({ error: "Ingresá un teléfono o un nombre" });
+        res.status(400).json({ error: "Ingresá tu DNI, un teléfono o un nombre" });
         return;
       }
 
@@ -57,8 +57,13 @@ export default async function handler(req, res) {
         const soloDigitos = tel.replace(/\D/g, "");
         const todosSnap = await db.collection("alumnos").get();
         alumnosDocs = todosSnap.docs.filter((d) => {
-          const telefono = (d.data().telefono || "").replace(/\D/g, "");
-          return telefono.length > 0 && soloDigitos.length >= 6 && telefono.includes(soloDigitos);
+          const data = d.data();
+          const telefono = (data.telefono || "").replace(/\D/g, "");
+          const dni = String(data.dni || "").replace(/\D/g, "");
+          // DNI: coincidencia exacta. Teléfono: coincidencia parcial (con o sin 0/15).
+          const coincideDni = dni.length > 0 && dni === soloDigitos;
+          const coincideTel = telefono.length > 0 && soloDigitos.length >= 6 && telefono.includes(soloDigitos);
+          return coincideDni || coincideTel;
         });
       } else {
         // No hay búsqueda de texto parcial en Firestore, así que traemos
@@ -74,7 +79,7 @@ export default async function handler(req, res) {
       if (alumnosDocs.length === 0) {
         res.status(404).json({
           error: tel
-            ? "No encontramos ningún alumno con ese teléfono"
+            ? "No encontramos ningún alumno con ese DNI o teléfono"
             : "No encontramos ningún alumno con ese nombre",
         });
         return;
