@@ -38,13 +38,13 @@ export function contratoHTML(d) {
       <title>Contrato JBC Egresados - ${esc(d.colegio)}</title>
       <style>
         @page { size: A4; margin: 16mm 16mm 18mm; }
-        body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #111; line-height: 1.5; }
-        h1 { text-align: center; font-size: 24px; margin: 0; }
-        h2.sub { text-align: center; font-size: 14px; margin: 4px 0 10px; }
-        h3 { color: #2F5496; font-size: 12px; margin: 14px 0 4px; text-transform: uppercase; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #111; line-height: 1.5; }
+        h1 { text-align: center; font-size: 26px; margin: 0; }
+        h2.sub { text-align: center; font-size: 16px; margin: 4px 0 10px; }
+        h3 { color: #2F5496; font-size: 14px; margin: 14px 0 4px; text-transform: uppercase; }
         p { margin: 4px 0; }
         table.cab, table.firmas { width: 100%; border-collapse: collapse; }
-        table.cab td, table.firmas td, table.firmas th { border: 1px solid #000; padding: 4px 8px; }
+        table.cab td, table.firmas td, table.firmas th { font-size: 14px; border: 1px solid #000; padding: 4px 8px; }
         table.cab td { text-align: center; width: 50%; }
         table.firmas th { background: #eee; text-align: left; }
         table.firmas td { padding: 7px 8px; }
@@ -54,7 +54,7 @@ export function contratoHTML(d) {
         .fila { margin: 6px 0; }
         .marcas span { margin-right: 14px; }
         .nobreak { page-break-inside: avoid; }
-        footer { text-align: center; font-size: 10px; font-weight: bold; margin-top: 18px; }
+        footer { text-align: center; font-size: 12px; font-weight: bold; margin-top: 18px; }
       </style>
     </head>
     <body>
