@@ -14,6 +14,7 @@ import {
   copiarTalleFichaEnExtras,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
+import ContratoModal from "./ContratoModal";
 
 export default function ColegioDetail() {
   const { colegioId } = useParams();
@@ -29,6 +30,7 @@ export default function ColegioDetail() {
   const [showConfirmacionApiModal, setShowConfirmacionApiModal] = useState(false);
   const [showCuponeraApiModal, setShowCuponeraApiModal] = useState(false);
   const [showExtractoModal, setShowExtractoModal] = useState(false);
+  const [showContratoModal, setShowContratoModal] = useState(false);
 
   async function refresh() {
     const c = await getColegio(colegioId);
@@ -331,6 +333,9 @@ export default function ColegioDetail() {
           <button className="btn btn-outline" onClick={handleImprimirBordados} disabled={!alumnos?.length}>
             Imprimir bordados
           </button>
+          <button className="btn btn-outline" onClick={() => setShowContratoModal(true)}>
+            Contrato
+          </button>
           <button className="btn btn-outline" onClick={() => setShowExtractoModal(true)} disabled={!alumnos?.length}>
             Extracto para delegada
           </button>
@@ -469,6 +474,15 @@ export default function ColegioDetail() {
 
       {showCuponeraApiModal && (
         <CuponeraApiModal colegio={colegio} alumnos={alumnos} onClose={() => setShowCuponeraApiModal(false)} />
+      )}
+
+      {showContratoModal && (
+        <ContratoModal
+          colegio={colegio}
+          alumnos={alumnos}
+          onClose={() => setShowContratoModal(false)}
+          onSaved={async () => setColegio(await getColegio(colegioId))}
+        />
       )}
 
       {showExtractoModal && (
