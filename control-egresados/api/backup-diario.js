@@ -1,5 +1,7 @@
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import nodemailer from "nodemailer";
+import { gzipSync } from "node:zlib";
 
 function getDb() {
   if (getApps().length === 0) {
@@ -11,6 +13,39 @@ function getDb() {
     initializeApp({ credential: cert(parsed) });
   }
   return getFirestore();
+}
+
+
+// Manda un backup por mail (adjunto comprimido). Usa una cuenta de Gmail con
+// "contraseña de aplicación". Variables de entorno en Vercel:
+//   BACKUP_EMAIL_USER (casilla que envía), BACKUP_EMAIL_PASS (contraseña de
+//   aplicación) y BACKUP_EMAIL_TO (a dónde llega; si falta, usa BACKUP_EMAIL_USER).
+async function enviarBackupPorMail(backup) {
+  const user = process.env.BACKUP_EMAIL_USER;
+  const pass = process.env.BACKUP_EMAIL_PASS;
+  if (!user || !pass) {
+    return { enviado: false, motivo: "Falta configurar BACKUP_EMAIL_USER y BACKUP_EMAIL_PASS en Vercel" };
+  }
+  const destino = process.env.BACKUP_EMAIL_TO || user;
+  const transporte = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass: pass.replace(/\s+/g, "") },
+  });
+  const json = JSON.stringify(backup);
+  const adjunto = gzipSync(Buffer.from(json, "utf8"));
+  const resumen = Object.entries(backup.resumen || {})
+    .map(([c, n]) => `${c}: ${n}`)
+    .join(" · ");
+  await transporte.sendMail({
+    from: `"Control de Egresados" <${user}>`,
+    to: destino,
+    subject: `Backup JBC Egresados - ${backup.fecha}`,
+    text:
+      `Adjunto el backup del ${backup.fecha}.\n\n${resumen}\n\n` +
+      `El archivo está comprimido (.json.gz). Se abre con cualquier descompresor (7-Zip, WinRAR, o doble clic en Mac) y adentro queda el .json que se puede restaurar.`,
+    attachments: [{ filename: `backup-egresados-${backup.fecha}.json.gz`, content: adjunto }],
+  });
+  return { enviado: true, destino };
 }
 
 const COLECCIONES = ["colegios", "alumnos", "cuotas", "trabajos"];
@@ -39,6 +74,29 @@ export default async function handler(req, res) {
         return;
       }
       res.status(200).json(snap.data());
+      return;
+    }
+
+    // POST { accion: "enviar-mail", fecha? } -> manda por mail el backup de esa
+    // fecha (o el más reciente si no se indica).
+    if (req.method === "POST" && req.body?.accion === "enviar-mail") {
+      let snap;
+      if (req.body.fecha) {
+        snap = await db.collection("backups").doc(String(req.body.fecha)).get();
+      } else {
+        const ult = await db.collection("backups").orderBy("fecha", "desc").limit(1).get();
+        snap = ult.docs[0];
+      }
+      if (!snap || !snap.exists) {
+        res.status(404).json({ error: "No hay un backup para enviar" });
+        return;
+      }
+      const resultado = await enviarBackupPorMail(snap.data());
+      if (!resultado.enviado) {
+        res.status(400).json({ error: resultado.motivo });
+        return;
+      }
+      res.status(200).json({ ok: true, fecha: snap.id, destino: resultado.destino });
       return;
     }
 
@@ -148,7 +206,17 @@ export default async function handler(req, res) {
     });
     await Promise.all(borrarPromesas);
 
-    res.status(200).json({ ok: true, fecha, resumen });
+    // Después de guardar el backup, lo mandamos por mail. Si el mail falla
+    // (o no está configurado) el backup igual quedó guardado.
+    let mail;
+    try {
+      mail = await enviarBackupPorMail({ fecha, creadoEn: new Date().toISOString(), resumen, datos });
+    } catch (errMail) {
+      console.error("No se pudo enviar el backup por mail:", errMail);
+      mail = { enviado: false, motivo: errMail.message || "Error al enviar el mail" };
+    }
+
+    res.status(200).json({ ok: true, fecha, resumen, mail });
   } catch (err) {
     console.error("Error en backup-diario:", err);
     res.status(500).json({ error: err.message || "No se pudo hacer el backup" });

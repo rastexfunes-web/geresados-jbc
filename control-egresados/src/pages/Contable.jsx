@@ -64,12 +64,27 @@ export default function Contable() {
       const resp = await fetch("/api/backup-diario", { method: "POST" });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "No se pudo hacer el backup");
-      alert(`Backup del ${data.fecha} listo.`);
+      alert(`Backup del ${data.fecha} listo.${data.mail?.enviado ? ` Te lo mandé a ${data.mail.destino}.` : data.mail?.motivo ? ` (No se mandó por mail: ${data.mail.motivo})` : ""}`);
       await cargarBackups();
     } catch (err) {
       alert(`Error: ${err.message}`);
     } finally {
       setHaciendoBackup(false);
+    }
+  }
+
+  async function handleEnviarBackupMail(fecha) {
+    try {
+      const resp = await fetch("/api/backup-diario", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion: "enviar-mail", fecha }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "No se pudo enviar el mail");
+      alert(`Listo, te mandé el backup del ${data.fecha} a ${data.destino}.`);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
@@ -286,6 +301,9 @@ export default function Contable() {
                   <td>{b.resumen?.cuotas ?? "—"}</td>
                   <td>{b.resumen?.trabajos ?? "—"}</td>
                   <td style={{ display: "flex", gap: 8 }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => handleEnviarBackupMail(b.fecha)}>
+                      Enviar al mail
+                    </button>
                     <button className="btn btn-outline btn-sm" onClick={() => handleDescargarBackup(b.fecha)}>
                       Descargar
                     </button>
