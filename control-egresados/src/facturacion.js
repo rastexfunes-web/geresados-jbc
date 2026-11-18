@@ -86,6 +86,6 @@ export async function traerDatosPagoMP(cuotaId) {
     body: JSON.stringify({ cuotaId }),
   });
   const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data.error || "No se pudieron traer los datos");
+  if (!resp.ok) throw new Error(data.error || `No se pudieron traer los datos (error ${resp.status})`);
   return data;
 }
