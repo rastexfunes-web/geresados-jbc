@@ -75,6 +75,7 @@ export default async function handler(req, res) {
       await cuotaRef.update({
         estado: "pagada",
         metodoPago: "mercadopago",
+        montoPagado: Number(pago.transaction_amount) || null,
         fechaPago: FieldValue.serverTimestamp(),
       });
       corregidos++;

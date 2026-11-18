@@ -20,6 +20,7 @@ import {
   actualizarAlumno,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
+import { abrirPdfFactura, emitirFactura, numeroFactura } from "../facturacion";
 
 export default function AlumnoDetail() {
   const { colegioId, alumnoId } = useParams();
@@ -30,6 +31,7 @@ export default function AlumnoDetail() {
   const [busyCuotaId, setBusyCuotaId] = useState(null);
   const [error, setError] = useState("");
   const [showExtraModal, setShowExtraModal] = useState(false);
+  const [cuotaAFacturar, setCuotaAFacturar] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
   async function refresh() {
@@ -107,6 +109,11 @@ export default function AlumnoDetail() {
   }
 
   async function handleDesmarcar(cuota) {
+    if (
+      cuota.factura &&
+      !confirm("Esta cuota ya tiene una factura emitida en ARCA. Deshacer el pago NO anula la factura (habría que hacer una nota de crédito). ¿Deshacer igual?")
+    )
+      return;
     setBusyCuotaId(cuota.id);
     try {
       await desmarcarCuota(cuota.id);
@@ -366,6 +373,20 @@ export default function AlumnoDetail() {
                       </>
                     )}
                     {c.estado === "pagada" && (
+                      c.factura ? (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => abrirPdfFactura(c.id).catch((err) => alert(err.message))}
+                        >
+                          Factura {numeroFactura(c.factura)}
+                        </button>
+                      ) : (
+                        <button className="btn btn-gold btn-sm" onClick={() => setCuotaAFacturar(c)}>
+                          Facturar
+                        </button>
+                      )
+                    )}
+                    {c.estado === "pagada" && (
                       <button
                         className="btn btn-ghost btn-sm"
                         disabled={busyCuotaId === c.id}
@@ -381,6 +402,19 @@ export default function AlumnoDetail() {
           </tbody>
         </table>
       </div>
+
+      {cuotaAFacturar && (
+        <FacturarModal
+          cuota={cuotaAFacturar}
+          alumno={alumno}
+          colegio={colegio}
+          onClose={() => setCuotaAFacturar(null)}
+          onDone={async () => {
+            setCuotaAFacturar(null);
+            await refresh();
+          }}
+        />
+      )}
 
       {showExtraModal && (
         <ExtraModal
@@ -671,6 +705,69 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? "Agregando…" : "Agregar extra"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+function FacturarModal({ cuota, alumno, colegio, onClose, onDone }) {
+  const [monto, setMonto] = useState(String(cuota.montoPagado ?? cuota.monto ?? ""));
+  const [dni, setDni] = useState(alumno.dniResponsable || "");
+  const [nombre, setNombre] = useState(alumno.nombreResponsable || "");
+  const [enviando, setEnviando] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (
+      !confirm(
+        `Se va a emitir una Factura B real por $${Number(monto).toLocaleString("es-AR")} a nombre de DNI ${dni}. Una vez emitida no se puede borrar (solo anular con nota de crédito). ¿Seguimos?`
+      )
+    )
+      return;
+    setEnviando(true);
+    try {
+      const f = await emitirFactura({ cuota, alumno, colegio, monto: Number(monto), dni, nombre });
+      alert(`Factura ${numeroFactura(f)} emitida. CAE ${f.cae}.`);
+      await onDone();
+    } catch (err) {
+      alert(err.message || "No se pudo facturar");
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h2>Facturar cobro</h2>
+        <p style={{ fontSize: 13, color: "var(--slate)", marginTop: -8 }}>
+          {cuota.esSena ? "Seña" : cuota.esExtra ? cuota.descripcion : `Cuota ${cuota.numero}`} — {alumno.apellido} {alumno.nombre}
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label>Monto cobrado ($)</label>
+            <input type="number" min="1" step="0.01" required value={monto} onChange={(e) => setMonto(e.target.value)} />
+            <p style={{ fontSize: 12, color: "var(--slate)", margin: "4px 0 0" }}>
+              {cuota.montoPagado
+                ? "Es lo que acreditó Mercado Pago."
+                : "Revisá que sea lo que realmente se cobró (por ejemplo, si pagó con recargo)."}
+            </p>
+          </div>
+          <div className="field">
+            <label>DNI del responsable del pago</label>
+            <input required inputMode="numeric" value={dni} onChange={(e) => setDni(e.target.value)} placeholder="Ej: 30123456" />
+          </div>
+          <div className="field">
+            <label>Nombre del responsable (opcional)</label>
+            <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Ana Pérez" />
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={enviando}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" disabled={enviando}>
+              {enviando ? "Emitiendo…" : "Emitir factura"}
             </button>
           </div>
         </form>
