@@ -70,6 +70,6 @@ export default async function handler(req, res) {
     res.status(200).json({ ok: true, ...datos });
   } catch (err) {
     console.error("Error en datos-pago:", err);
-    res.status(500).json({ error: "No se pudieron traer los datos de Mercado Pago" });
+    res.status(500).json({ error: `No se pudieron traer los datos de Mercado Pago (${err.message || "error"})` });
   }
 }
