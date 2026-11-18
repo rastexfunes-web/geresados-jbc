@@ -20,7 +20,7 @@ import {
   actualizarAlumno,
 } from "../data";
 import { generarCuponCuota } from "../mercadopago";
-import { abrirPdfFactura, emitirFactura, numeroFactura, traerDatosPagoMP } from "../facturacion";
+import { abrirPdfFactura, descripcionCuota, emitirFactura, numeroFactura } from "../facturacion";
 
 export default function AlumnoDetail() {
   const { colegioId, alumnoId } = useParams();
@@ -715,52 +715,21 @@ function ExtraModal({ alumno, colegio, cuotas, onClose, onCreated }) {
 
 
 function FacturarModal({ cuota, alumno, colegio, onClose, onDone }) {
-  // Datos de quien pagó: primero lo que guardó Mercado Pago en la cuota; si no
-  // está, lo último que se usó para este alumno.
-  const pag = cuota.pagador || {};
-  const dniMP = pag.tipoDoc === "DNI" || !pag.tipoDoc ? pag.dni : "";
   const [monto, setMonto] = useState(String(cuota.montoPagado ?? cuota.monto ?? ""));
-  const [dni, setDni] = useState(dniMP || alumno.dniResponsable || "");
-  const [nombre, setNombre] = useState(pag.nombre || alumno.nombreResponsable || "");
   const [enviando, setEnviando] = useState(false);
-  const [buscandoMP, setBuscandoMP] = useState(false);
-  const [avisoMP, setAvisoMP] = useState(
-    cuota.pagador?.dni ? (dniMP ? "Datos tomados del pago de Mercado Pago." : `Mercado Pago informó un ${pag.tipoDoc}, no un DNI: cargalo a mano.`) : ""
-  );
-
-  async function handleTraerMP() {
-    setBuscandoMP(true);
-    setAvisoMP("");
-    try {
-      const d = await traerDatosPagoMP(cuota.id);
-      if (d.montoPagado) setMonto(String(d.montoPagado));
-      if (d.nombre) setNombre(d.nombre);
-      if (d.dni && (!d.tipoDoc || d.tipoDoc === "DNI")) {
-        setDni(d.dni);
-        setAvisoMP("Datos tomados del pago de Mercado Pago.");
-      } else if (d.dni) {
-        setAvisoMP(`Mercado Pago informó un ${d.tipoDoc || "documento"} (${d.dni}), no un DNI: cargalo a mano.`);
-      } else {
-        setAvisoMP("Mercado Pago no informó el DNI de quien pagó: cargalo a mano.");
-      }
-    } catch (err) {
-      setAvisoMP(err.message);
-    } finally {
-      setBuscandoMP(false);
-    }
-  }
+  const detalle = descripcionCuota(cuota, alumno);
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (
       !confirm(
-        `Se va a emitir una Factura B real por $${Number(monto).toLocaleString("es-AR")} a nombre de DNI ${dni}. Una vez emitida no se puede borrar (solo anular con nota de crédito). ¿Seguimos?`
+        `Se va a emitir una Factura B real a Consumidor Final por $${Number(monto).toLocaleString("es-AR")}. Una vez emitida no se puede borrar (solo anular con nota de crédito). ¿Seguimos?`
       )
     )
       return;
     setEnviando(true);
     try {
-      const f = await emitirFactura({ cuota, alumno, colegio, monto: Number(monto), dni, nombre });
+      const f = await emitirFactura({ cuota, alumno, monto: Number(monto) });
       alert(`Factura ${numeroFactura(f)} emitida. CAE ${f.cae}.`);
       await onDone();
     } catch (err) {
@@ -774,16 +743,10 @@ function FacturarModal({ cuota, alumno, colegio, onClose, onDone }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>Facturar cobro</h2>
         <p style={{ fontSize: 13, color: "var(--slate)", marginTop: -8 }}>
-          {cuota.esSena ? "Seña" : cuota.esExtra ? cuota.descripcion : `Cuota ${cuota.numero}`} — {alumno.apellido} {alumno.nombre}
+          Factura B a Consumidor Final. En el detalle va a decir:
+          <br />
+          <strong>{detalle}</strong>
         </p>
-        {cuota.metodoPago === "mercadopago" && (
-          <div style={{ marginBottom: 12 }}>
-            <button type="button" className="btn btn-outline btn-sm" onClick={handleTraerMP} disabled={buscandoMP}>
-              {buscandoMP ? "Buscando…" : "Traer datos de Mercado Pago"}
-            </button>
-            {avisoMP && <p style={{ fontSize: 12, color: "var(--slate)", margin: "6px 0 0" }}>{avisoMP}</p>}
-          </div>
-        )}
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label>Monto cobrado ($)</label>
@@ -793,14 +756,6 @@ function FacturarModal({ cuota, alumno, colegio, onClose, onDone }) {
                 ? "Es lo que acreditó Mercado Pago."
                 : "Revisá que sea lo que realmente se cobró (por ejemplo, si pagó con recargo)."}
             </p>
-          </div>
-          <div className="field">
-            <label>DNI del responsable del pago</label>
-            <input required inputMode="numeric" value={dni} onChange={(e) => setDni(e.target.value)} placeholder="Ej: 30123456" />
-          </div>
-          <div className="field">
-            <label>Nombre del responsable (opcional)</label>
-            <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Ana Pérez" />
           </div>
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose} disabled={enviando}>Cancelar</button>

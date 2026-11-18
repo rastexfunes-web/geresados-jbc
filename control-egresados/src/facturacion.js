@@ -25,21 +25,19 @@ export function numeroFactura(f) {
   return `${String(f.puntoVenta).padStart(4, "0")}-${String(f.numero).padStart(8, "0")}`;
 }
 
-export function descripcionCuota(cuota, alumno, colegio) {
+export function descripcionCuota(cuota, alumno) {
   const que = cuota.esSena ? "Seña" : cuota.esExtra ? cuota.descripcion || "Extra" : `Cuota ${cuota.numero}`;
-  return `${que} - ${colegio.nombre} - ${alumno.apellido} ${alumno.nombre}`;
+  return `Conjunto egresado de ${alumno.nombre} ${alumno.apellido} - ${que}`;
 }
 
 // Emite la factura y la deja guardada en la cuota (cuota.factura). Si esa
 // cuota ya tenía factura en ARCA, devuelve la misma sin emitir otra.
-export async function emitirFactura({ cuota, alumno, colegio, monto, dni, nombre }) {
+export async function emitirFactura({ cuota, alumno, monto }) {
   const data = await llamar({
     accion: "emitir",
     cuotaId: cuota.id,
     monto,
-    dni,
-    nombre,
-    descripcion: descripcionCuota(cuota, alumno, colegio),
+    descripcion: descripcionCuota(cuota, alumno),
   });
   const f = data.factura;
   const resumen = {
@@ -50,14 +48,8 @@ export async function emitirFactura({ cuota, alumno, colegio, monto, dni, nombre
     tipoComprobante: f.tipoComprobante,
     fecha: f.fecha,
     total: f.total,
-    dni: f.dni,
-    nombre: f.nombre || "",
   };
   await updateDoc(doc(db, "cuotas", cuota.id), { factura: resumen });
-  await updateDoc(doc(db, "alumnos", alumno.id), {
-    dniResponsable: f.dni,
-    nombreResponsable: f.nombre || "",
-  });
   return resumen;
 }
 
