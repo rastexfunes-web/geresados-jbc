@@ -74,3 +74,18 @@ export async function abrirPdfFactura(cuotaId) {
     throw err;
   }
 }
+
+// Trae de Mercado Pago quién pagó la cuota (DNI, nombre, monto).
+export async function traerDatosPagoMP(cuotaId) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Tenés que iniciar sesión");
+  const token = await user.getIdToken();
+  const resp = await fetch("/api/datos-pago", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ cuotaId }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || "No se pudieron traer los datos");
+  return data;
+}

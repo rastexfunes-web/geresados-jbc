@@ -1,4 +1,5 @@
 import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
+import { datosPagador } from "./_pagador.js";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
@@ -89,6 +90,8 @@ export default async function handler(req, res) {
         estado: "pagada",
         metodoPago: "mercadopago",
         montoPagado: Number(payment.transaction_amount) || null,
+        mpPaymentId: String(payment.id),
+        pagador: datosPagador(payment),
         fechaPago: FieldValue.serverTimestamp(),
       });
 
