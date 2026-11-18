@@ -5,7 +5,10 @@ export function datosPagador(payment) {
   const payer = payment?.payer || {};
   const titular = payment?.card?.cardholder || {};
   const ident = payer.identification?.number ? payer.identification : titular.identification || {};
-  const nombrePagador = [payer.first_name, payer.last_name].filter(Boolean).join(" ").trim();
+  const extra = payment?.additional_info?.payer || {};
+  const nombrePagador =
+    [payer.first_name, payer.last_name].filter(Boolean).join(" ").trim() ||
+    [extra.first_name, extra.last_name].filter(Boolean).join(" ").trim();
   return {
     tipoDoc: String(ident.type || "").toUpperCase(),
     dni: String(ident.number || "").replace(/\D/g, ""),
