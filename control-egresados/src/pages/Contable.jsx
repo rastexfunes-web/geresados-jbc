@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { emitirFactura, numeroFactura, traerDatosPagoMP } from "../facturacion";
 import { Link } from "react-router-dom";
 import {
   listColegios,
@@ -47,6 +48,7 @@ export default function Contable() {
   const [resultadoReconciliar, setResultadoReconciliar] = useState(null);
   const [backups, setBackups] = useState(null);
   const [haciendoBackup, setHaciendoBackup] = useState(false);
+  const [facturando, setFacturando] = useState(null); // { hechas, total } mientras corre
 
   async function cargarBackups() {
     try {
@@ -173,6 +175,62 @@ export default function Contable() {
     );
     cargarBackups();
   }, []);
+
+  // Factura una por una todas las cobranzas del listado que todavía no tienen
+  // factura. Para los pagos de Mercado Pago sin monto guardado, intenta traer
+  // el monto real que se acreditó (por si pagó con recargo).
+  async function handleFacturarPendientes(todas) {
+    // De a 100 por vez, para poder revisar entre tanda y tanda.
+    const pendientes = todas.slice(0, 100);
+    const total = pendientes.reduce((acc, c) => acc + Number(c.montoPagado ?? c.monto), 0);
+    if (
+      !confirm(
+        `Se van a emitir ${pendientes.length} facturas B reales${todas.length > pendientes.length ? ` (de ${todas.length} pendientes: se hacen de a 100 por vez)` : ""} a Consumidor Final, por un total aproximado de $${total.toLocaleString("es-AR")}.\n\n` +
+          "Una vez emitidas no se pueden borrar (solo anular con nota de crédito). Si se corta, las que ya salieron quedan hechas y podés volver a tocar el botón.\n\n¿Seguimos?"
+      )
+    )
+      return;
+    let hechas = 0;
+    let usaronValorCuota = 0;
+    const errores = [];
+    setFacturando({ hechas: 0, total: pendientes.length });
+    for (const c of pendientes) {
+      const alumno = alumnosPorId[c.alumnoId];
+      if (!alumno) {
+        errores.push(`Cuota sin alumno (${c.id})`);
+        continue;
+      }
+      try {
+        let monto = c.montoPagado;
+        if (!monto && c.metodoPago === "mercadopago") {
+          try {
+            const d = await traerDatosPagoMP(c.id);
+            monto = d.montoPagado;
+          } catch {
+            /* usamos el valor de la cuota */
+          }
+        }
+        if (!monto) {
+          monto = c.monto;
+          usaronValorCuota++;
+        }
+        await emitirFactura({ cuota: c, alumno, monto: Number(monto) });
+        hechas++;
+      } catch (err) {
+        errores.push(`${alumno.apellido} ${alumno.nombre}: ${err.message}`);
+        // Si ARCA o la función dejaron de responder, no seguimos insistiendo.
+        if (errores.length >= 3) break;
+      }
+      setFacturando({ hechas, total: pendientes.length });
+    }
+    setFacturando(null);
+    alert(
+      `Se emitieron ${hechas} de ${pendientes.length} facturas.` +
+        (usaronValorCuota ? `\n${usaronValorCuota} se hicieron por el valor de la cuota (no pude confirmar el monto exacto cobrado).` : "") +
+        (errores.length ? `\n\nProblemas:\n- ${errores.join("\n- ")}` : "")
+    );
+    window.location.reload();
+  }
 
   const colegiosPorId = useMemo(() => {
     const map = {};
@@ -393,6 +451,26 @@ export default function Contable() {
         </div>
       )}
 
+      {resumen.pagos.length > 0 && (() => {
+        const sinFactura = resumen.pagos.filter((c) => !c.factura);
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 10px", flexWrap: "wrap" }}>
+            <button
+              className="btn btn-gold"
+              disabled={!sinFactura.length || Boolean(facturando)}
+              onClick={() => handleFacturarPendientes(sinFactura)}
+            >
+              {facturando
+                ? `Facturando… ${facturando.hechas}/${facturando.total}`
+                : `Facturar cobros sin factura (${sinFactura.length})`}
+            </button>
+            <span style={{ fontSize: 13, color: "var(--slate)" }}>
+              Factura los cobros del listado de abajo (según el período y el colegio elegidos).
+            </span>
+          </div>
+        );
+      })()}
+
       {resumen.pagos.length > 0 && (
         <div className="card" style={{ marginBottom: 28 }}>
           <table className="table">
@@ -404,6 +482,7 @@ export default function Contable() {
                 <th>Cuota</th>
                 <th>Monto</th>
                 <th>Método</th>
+                <th>Factura</th>
               </tr>
             </thead>
             <tbody>
@@ -442,6 +521,9 @@ export default function Contable() {
                             <td style={{ fontSize: 13, color: "var(--slate)" }}>
                               {c.metodoPago === "mercadopago" ? "Mercado Pago" : c.metodoPago === "manual" ? "Manual" : "—"}
                             </td>
+                            <td style={{ fontSize: 13, color: c.factura ? "var(--navy)" : "var(--slate)" }}>
+                              {c.factura ? numeroFactura(c.factura) : "Sin facturar"}
+                            </td>
                           </tr>
                         );
                       })}
@@ -450,6 +532,7 @@ export default function Contable() {
                           Total {fecha !== "sin-fecha" ? formatFechaAR(fecha) : ""}:
                         </td>
                         <td style={{ fontWeight: 700 }}>${totalDelDia.toLocaleString("es-AR")}</td>
+                        <td></td>
                         <td></td>
                       </tr>
                     </>
